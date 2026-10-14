@@ -25,12 +25,12 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 # Naming convention for automatic index/constraint naming
 NAMING_CONVENTION: dict[str, str] = {
-    "ix": "ix_%(table_name)s_%(column_names)s",
-    "ufk": "ufk_%(table_name)s_%(column_names)s",
-    "fk": "fk_%(table_name)s_%(column_names)s_%(referred_table_name)s",
+    "ix": "ix_%(table_name)s_%(column_0_name)s",
+    "ufk": "ufk_%(table_name)s_%(column_0_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
     "pk": "pk_%(table_name)s",
-    "uq": "uq_%(table_name)s_%(column_names)s",
-    "cv": "cv_%(table_name)s_%(column_names)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "cv": "cv_%(table_name)s_%(column_0_name)s",
 }
 
 _metadata = MetaData(naming_convention=NAMING_CONVENTION)

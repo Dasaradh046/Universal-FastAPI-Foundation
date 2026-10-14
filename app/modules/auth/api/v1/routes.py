@@ -265,9 +265,9 @@ async def revoke_session(
 )
 async def revoke_other_sessions(
     keep_current: bool = True,
-    user: Annotated[CurrentUser, Depends(get_current_active_user)] = Depends(get_current_active_user),
-    db: Annotated[AsyncSession, Depends(get_db)] = Depends(get_db),
-    auth_svc: Annotated[AuthService, Depends(get_auth_service)] = Depends(get_auth_service),
+    user: Annotated[CurrentUser, Depends(get_current_active_user)] = ...,
+    db: Annotated[AsyncSession, Depends(get_db)] = ...,
+    auth_svc: Annotated[AuthService, Depends(get_auth_service)] = ...,
 ):
     """Revoke all device sessions except the current one."""
     keep_id = user.session_id if keep_current else None

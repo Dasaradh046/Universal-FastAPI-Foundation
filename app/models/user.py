@@ -14,7 +14,6 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
-    Index,
     String,
     Text,
     text,
@@ -36,9 +35,7 @@ class Tenant(TenantBase, Base):
     """Organization/tenant record."""
 
     __tablename__ = "tenants"
-    __table_args__ = (
-        Index("ix_tenants_status", "status"),
-    )
+    __table_args__ = ()
 
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     slug: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
@@ -61,12 +58,7 @@ class User(Base):
     """A login-capable account within a tenant."""
 
     __tablename__ = "users"
-    __table_args__ = (
-        Index("ix_users_tenant_email", "tenant_id", "email"),
-        Index("ix_users_email", "email"),
-        Index("ix_users_role", "role"),
-        Index("ix_users_tenant_active", "tenant_id", "is_active"),
-    )
+    __table_args__ = ()
 
     id: Mapped[uuid.UUID] = mapped_column(
         SQL_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
@@ -233,7 +225,6 @@ class RoleModel(TenantBase, Base):
 
     __tablename__ = "roles"
     __table_args__ = (
-        Index("ix_roles_tenant_code", "tenant_id", "code"),
     )
 
     code: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
@@ -259,7 +250,6 @@ class Permission(TenantBase, Base):
 
     __tablename__ = "permissions"
     __table_args__ = (
-        Index("ix_permissions_tenant_code", "tenant_id", "code"),
     )
 
     code: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
@@ -274,10 +264,6 @@ class RolePermission(UUIDPrimaryKey, Base):
 
     __tablename__ = "role_permissions"
     __table_args__ = (
-        Index(
-            "ix_role_permissions_role_perm",
-            "tenant_id", "role_id", "permission_id",
-        ),
     )
 
     tenant_id: Mapped[uuid.UUID] = mapped_column(
@@ -303,8 +289,6 @@ class UserRole(TenantBase, Base):
 
     __tablename__ = "user_roles"
     __table_args__ = (
-        Index("ix_user_roles_user", "user_id"),
-        Index("ix_user_roles_role", "role_id"),
     )
 
     tenant_id: Mapped[uuid.UUID] = mapped_column(
@@ -329,9 +313,6 @@ class UserSession(Base):
 
     __tablename__ = "user_sessions"
     __table_args__ = (
-        Index("ix_user_sessions_user", "user_id"),
-        Index("ix_user_sessions_refresh_hash", "refresh_token_hash"),
-        Index("ix_user_sessions_expires", "expires_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -383,8 +364,6 @@ class PasswordResetToken(Base):
 
     __tablename__ = "password_reset_tokens"
     __table_args__ = (
-        Index("ix_reset_tokens_token_hash", "token_hash"),
-        Index("ix_reset_tokens_user", "user_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(

@@ -22,6 +22,11 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Debug mode: {settings.DEBUG}")
     
+    # Enforce production secrets in non-local environments
+    if not settings.is_local:
+        settings.enforce_production_secrets()
+        logger.info("Production secrets validated")
+    
     # Create database tables
     try:
         await create_db_and_tables()
@@ -46,3 +51,6 @@ async def lifespan(app: FastAPI):
         logger.error(f"Error disposing database engine: {e}")
     
     logger.info("Application shutdown complete")
+
+
+__all__ = ["lifespan"]

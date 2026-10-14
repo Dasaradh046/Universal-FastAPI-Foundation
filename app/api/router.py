@@ -5,7 +5,8 @@ from fastapi import APIRouter
 from app.api.health import router as health_router
 from app.modules.example_module.router import router as example_router
 from app.integrations.email.api.router import router as email_router
-from app.modules.auth.api.v1.routes import router as auth_router
+from app.modules.auth.api.v1.routes import router as auth_router_v1
+from app.modules.identity.api.router import router as identity_router
 
 api_router = APIRouter()
 
@@ -19,7 +20,10 @@ api_router.include_router(example_router, prefix="/examples", tags=["examples"])
 api_router.include_router(email_router, prefix="/integrations/email", tags=["email"])
 
 # Include auth router
-api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
+api_router.include_router(auth_router_v1, prefix="/auth", tags=["auth"])
+
+# Include identity router
+api_router.include_router(identity_router, prefix="/identity", tags=["identity"])
 
 # Additional routers will be included here as modules are added
 # Example:

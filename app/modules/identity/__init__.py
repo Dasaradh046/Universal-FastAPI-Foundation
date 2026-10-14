@@ -44,7 +44,6 @@ MANIFEST = ModuleManifest(
         USER_WRITE,
         USER_DELETE,
     ],
-    migrations_path="app.modules.identity.migrations",
 )
 
 # Export public interface

@@ -10,12 +10,12 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.core.security import hash_password
-from app.models.user import User, UserSession, PasswordResetToken
+from app.models.user import User, UserSession, PasswordResetToken, EmailVerificationToken
 from app.models.enums import Role
 
 logger = get_logger(__name__)
@@ -155,6 +155,12 @@ class UserRepository:
         must_change_password: bool = False,
     ) -> None:
         """Set a password hash for a user (global)."""
+        # Get current password history
+        user = await self.get_by_id_global(session, user_id)
+        if user and user.password_history_encrypted:
+            # TODO: Implement proper password history management with encryption
+            pass
+            
         stmt = (
             update(User)
             .where(User.id == user_id)
@@ -297,6 +303,48 @@ class UserRepository:
     async def revoke_all_sessions(self, session: AsyncSession, user_id: UUID) -> int:
         """Revoke *every* session for ``user_id`` including the current one."""
         return await self.revoke_other_sessions(session, user_id, keep_session_id=None)
+
+    # ---- Email verification tokens ------------------------------------------- #
+
+    async def create_email_verification_token(
+        self, session: AsyncSession, email_token: EmailVerificationToken
+    ) -> EmailVerificationToken:
+        """Persist an email verification token, invalidating any earlier unused ones for the user."""
+        await session.execute(
+            update(EmailVerificationToken)
+            .where(
+                EmailVerificationToken.user_id == email_token.user_id,
+                EmailVerificationToken.used_at.is_(None),
+            )
+            .values(expires_at=datetime.now(UTC))
+        )
+        session.add(email_token)
+        await session.flush()
+        return email_token
+
+    async def get_valid_email_verification_token(
+        self, session: AsyncSession, token_hash: str, now: datetime
+    ) -> EmailVerificationToken | None:
+        """Return the email verification token for ``token_hash`` if unused and unexpired."""
+        stmt = select(EmailVerificationToken).where(
+            EmailVerificationToken.token_hash == token_hash
+        )
+        result = await session.execute(stmt)
+        token = result.scalar_one_or_none()
+        if token is None or not token.is_valid:
+            return None
+        return token
+
+    async def mark_email_verification_token_used(
+        self, session: AsyncSession, token_id: UUID
+    ) -> None:
+        """Consume a single-use email verification token."""
+        stmt = (
+            update(EmailVerificationToken)
+            .where(EmailVerificationToken.id == token_id)
+            .values(used_at=datetime.now(UTC))
+        )
+        await session.execute(stmt)
 
     # ---- Password reset tokens (forgot-password flow) ------------------------ #
 

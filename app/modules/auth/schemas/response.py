@@ -237,6 +237,28 @@ class LogoutAllResponse(BaseModel):
     message: str
 
 
+class MessageResponse(BaseModel):
+    """Simple acknowledgement payload."""
+
+    message: str
+
+
+class EmailVerificationResponse(BaseModel):
+    """Response for email verification endpoints."""
+    
+    message: str
+
+
+class RequestEmailVerificationResponse(BaseModel):
+    """Response for request email verification endpoint."""
+    
+    message: str
+
+
+# Rebuild the union model
+TwoFactorChallengeResponse.model_rebuild()
+
+
 # Rebuild the union model
 TwoFactorChallengeResponse.model_rebuild()
 
@@ -263,6 +285,8 @@ __all__ = [
     "TwoFactorRegenerateResponse",
     "RefreshTokenResponse",
     "MessageResponse",
+    "EmailVerificationResponse",
+    "RequestEmailVerificationResponse",
     "SessionListResponse",
     "TwoFactorResponse",
     "LogoutAllResponse",

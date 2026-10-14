@@ -13,6 +13,16 @@ class TenantBase(BaseModel):
     """Base tenant model."""
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=1000)
+    # Encrypted sensitive fields (write-only in create/update)
+    billing_email: Optional[str] = Field(None, max_length=255)
+    billing_address: Optional[str] = Field(None, max_length=500)
+    tax_id: Optional[str] = Field(None, max_length=50)
+    primary_contact_phone: Optional[str] = Field(None, max_length=20)
+    
+    # Settings
+    timezone: Optional[str] = Field(None, max_length=64)
+    locale: Optional[str] = Field(None, max_length=16)
+    password_policy_id: Optional[UUID] = Field(None)
     
     model_config = ConfigDict(
         str_strip_whitespace=True,
@@ -43,6 +53,7 @@ class TenantInDBBase(TenantBase):
     created_at: datetime
     updated_at: datetime
     
+    # Encrypted fields are not included in responses for security
     model_config = ConfigDict(
         from_attributes=True,
     )

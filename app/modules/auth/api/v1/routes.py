@@ -35,10 +35,12 @@ from app.modules.auth.services import AuthService, get_auth_service
 from app.modules.auth.schemas import (
     ChangePasswordRequest,
     DemoLoginRequest,
+    EmailVerificationRequest,
     ForgotPasswordRequest,
     LoginRequest,
     LogoutRequest,
     RefreshTokenRequest,
+    RequestEmailVerificationRequest,
     ResetPasswordRequest,
     SessionListResponse,
     TokenResponse,
@@ -392,6 +394,33 @@ async def reset_password(
     """Consume a reset token and set a new password."""
     ip_address = _client_ip(request)
     return await auth.reset_password(db, body.token, body.new_password, ip_address)
+
+
+# ---- Email verification ----------------------------------------------------- #
+
+
+@router.post("/request-email-verification", response_model=RequestEmailVerificationResponse, status_code=200)
+async def request_email_verification(
+    request: Request,
+    body: RequestEmailVerificationRequest,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    auth: Annotated[AuthService, Depends(get_auth_service)],
+):
+    """Request an email verification link."""
+    ip_address = _client_ip(request)
+    return await auth.request_email_verification(session, body.email, ip_address)
+
+
+@router.post("/verify-email", response_model=EmailVerificationResponse, status_code=200)
+async def verify_email(
+    request: Request,
+    body: EmailVerificationRequest,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    auth: Annotated[AuthService, Depends(get_auth_service)],
+):
+    """Verify an email address using a verification token."""
+    ip_address = _client_ip(request)
+    return await auth.verify_email(session, body.token, ip_address)
 
 
 # ---- Demo login (local/dev only) ------------------------------------------- #

@@ -21,6 +21,18 @@ class AdminPasswordResetRequest(BaseModel):
     )
 
 
+class EmailVerificationRequest(BaseModel):
+    """POST /auth/verify-email request body."""
+    
+    token: str = Field(..., min_length=16, max_length=256, description="Verification token from the email link")
+
+
+class RequestEmailVerificationRequest(BaseModel):
+    """POST /auth/request-email-verification request body."""
+    
+    email: EmailStr = Field(..., description="Account email to send the verification link to")
+
+
 class PlatformUserUpdate(BaseModel):
     """PATCH /users/{user_id} — only the active flag is editable."""
 

@@ -12,6 +12,7 @@ from app.models.user import (
     UserRole,
     UserSession,
     PasswordResetToken,
+    EmailVerificationToken,
 )
 from app.models.enums import Role, AuditAction, TenantStatus
 
@@ -28,6 +29,7 @@ __all__ = [
     "UserRole",
     "UserSession",
     "PasswordResetToken",
+    "EmailVerificationToken",
     "Role",
     "AuditAction",
     "TenantStatus",

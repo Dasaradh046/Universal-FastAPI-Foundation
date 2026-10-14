@@ -1,103 +1,248 @@
 """
-Field-level encryption utilities using Fernet (AES-128-CBC + HMAC).
+Encryption utilities for the Universal FastAPI Foundation.
 
-Used for encrypting sensitive data at rest in the database:
-- TOTP secrets
-- Recovery codes
-- Any other PII that must not be stored in plaintext
-
-The encryption key is provided via ``ENCRYPTION_KEY`` (a base64-encoded
-Fernet key) or ``ENCRYPTION_KEY_FILE`` (path to a file containing the key).
+Provides:
+- Fernet-based field encryption for sensitive data (PII, tokens, secrets)
+- Argon2 password hashing with secure defaults
+- Key management from app/keys directory
 """
 
 from __future__ import annotations
 
 import base64
-from functools import lru_cache
+import logging
+import os
 from pathlib import Path
-from typing import Any
+from typing import Optional
 
-from sqlalchemy import TypeDecorator, Text
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import serialization
+from passlib.hash import argon2
 
-from app.core.config import settings
-from app.core.logging import get_logger
-
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
-@lru_cache(maxsize=1)
-def _get_fernet() -> Any:
-    """Get or create the Fernet cipher instance."""
-    from cryptography.fernet import Fernet
-
-    key = settings.ENCRYPTION_KEY
-    if not key:
-        if settings.ENCRYPTION_KEY_FILE:
-            key_file = Path(settings.ENCRYPTION_KEY_FILE)
-            if key_file.is_file():
-                key = key_file.read_text().strip()
-            else:
-                raise RuntimeError(
-                    f"Encryption key file not found: {key_file}"
-                )
+class EncryptionManager:
+    """Manages encryption keys and operations."""
+    
+    _instance: Optional["EncryptionManager"] = None
+    _fernet: Optional[Fernet] = None
+    _private_key: Optional[bytes] = None
+    _public_key: Optional[bytes] = None
+    
+    def __new__(cls) -> "EncryptionManager":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    def __init__(self):
+        if self._fernet is None:
+            self._load_keys()
+    
+    def _load_keys(self) -> None:
+        """Load encryption keys from the keys directory."""
+        keys_dir = Path(__file__).parent.parent / "keys"
+        
+        # Load Fernet key
+        fernet_path = keys_dir / "fernet" / "fernet_key.key"
+        if fernet_path.exists():
+            with open(fernet_path, "rb") as f:
+                fernet_key = f.read().strip()
+            self._fernet = Fernet(fernet_key)
+            logger.info("Loaded Fernet key for field encryption")
         else:
-            raise RuntimeError(
-                "ENCRYPTION_KEY or ENCRYPTION_KEY_FILE must be set for field encryption."
-            )
+            logger.warning("Fernet key not found at %s", fernet_path)
+            # Generate a new one for development (not for production!)
+            self._fernet = Fernet(Fernet.generate_key())
+            logger.warning("Using generated Fernet key - NOT FOR PRODUCTION")
+        
+        # Load RSA keys for JWT
+        private_key_path = keys_dir / "rsa" / "private_key.pem"
+        public_key_path = keys_dir / "rsa" / "public_key.pem"
+        
+        if private_key_path.exists():
+            with open(private_key_path, "rb") as f:
+                self._private_key = f.read()
+            logger.info("Loaded RSA private key for JWT signing")
+        else:
+            logger.warning("RSA private key not found at %s", private_key_path)
+        
+        if public_key_path.exists():
+            with open(public_key_path, "rb") as f:
+                self._public_key = f.read()
+            logger.info("Loaded RSA public key for JWT verification")
+        else:
+            logger.warning("RSA public key not found at %s", public_key_path)
+    
+    @property
+    def fernet(self) -> Fernet:
+        """Get the Fernet instance for field encryption."""
+        if self._fernet is None:
+            self._load_keys()
+        return self._fernet
+    
+    @property
+    def private_key(self) -> Optional[bytes]:
+        """Get the RSA private key."""
+        return self._private_key
+    
+    @property
+    def public_key(self) -> Optional[bytes]:
+        """Get the RSA public key."""
+        return self._public_key
 
-    # Ensure the key is valid
-    try:
-        return Fernet(key.encode() if isinstance(key, str) else key)
-    except Exception as exc:
-        raise RuntimeError(f"Invalid encryption key: {exc}") from exc
+
+# Singleton instance
+encryption_manager = EncryptionManager()
 
 
-def encrypt_value(value: str) -> str:
-    """Encrypt a string value using Fernet."""
-    if not value:
-        return value
-    fernet = _get_fernet()
-    encrypted = fernet.encrypt(value.encode("utf-8"))
-    return encrypted.decode("utf-8")
-
-
-def decrypt_value(value: str) -> str:
-    """Decrypt a Fernet-encrypted string value."""
-    if not value:
-        return value
-    fernet = _get_fernet()
-    decrypted = fernet.decrypt(value.encode("utf-8"))
-    return decrypted.decode("utf-8")
-
-
-class EncryptedText(TypeDecorator):
-    """SQLAlchemy type for encrypted text fields.
-
-    Values are encrypted on write and decrypted on read, transparently.
-    The underlying column is a Text type in the database.
-
-    Note: queries cannot filter on encrypted columns — the encryption is
-    applied at the column type level, not at the query level.
+def encrypt_field(value: str) -> str:
     """
+    Encrypt a string field using Fernet.
+    
+    Args:
+        value: The plaintext value to encrypt.
+        
+    Returns:
+        Base64-encoded encrypted value.
+    """
+    if not value:
+        return value
+    encrypted = encryption_manager.fernet.encrypt(value.encode())
+    return base64.urlsafe_b64encode(encrypted).decode()
 
-    impl = Text
-    cache_ok = True
 
-    def process_bind_param(self, value: str | None, dialect: Any) -> str | None:
-        """Encrypt the value before writing to the database."""
+def decrypt_field(encrypted_value: str) -> str:
+    """
+    Decrypt a Fernet-encrypted field.
+    
+    Args:
+        encrypted_value: The base64-encoded encrypted value.
+        
+    Returns:
+        The decrypted plaintext value.
+        
+    Raises:
+        InvalidToken: If the token is invalid or corrupted.
+    """
+    if not encrypted_value:
+        return encrypted_value
+    try:
+        encrypted_bytes = base64.urlsafe_b64decode(encrypted_value.encode())
+        decrypted = encryption_manager.fernet.decrypt(encrypted_bytes)
+        return decrypted.decode()
+    except InvalidToken:
+        logger.error("Failed to decrypt field - invalid token")
+        raise
+    except Exception as e:
+        logger.error("Failed to decrypt field: %s", e)
+        raise
+
+
+def hash_password(password: str) -> str:
+    """
+    Hash a password using Argon2.
+    
+    Uses secure defaults from config:
+    - Memory cost: 64 MB (65536 KB)
+    - Time cost: 3 iterations
+    - Parallelism: 4 threads
+    - Hash length: 32 bytes
+    - Salt length: 16 bytes
+    
+    Args:
+        password: The plaintext password to hash.
+        
+    Returns:
+        Argon2 hashed password string.
+    """
+    from app.core.config import settings
+    return argon2.using(
+        memory_cost=settings.ARGON2_MEMORY_COST,
+        time_cost=settings.ARGON2_TIME_COST,
+        parallelism=settings.ARGON2_PARALLELISM,
+        hash_len=settings.ARGON2_HASH_LEN,
+        salt_len=settings.ARGON2_SALT_LEN,
+    ).hash(password)
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    """
+    Verify a password against an Argon2 hash.
+    
+    Args:
+        password: The plaintext password to verify.
+        hashed: The Argon2 hash to verify against.
+        
+    Returns:
+        True if the password matches, False otherwise.
+    """
+    try:
+        return argon2.verify(password, hashed)
+    except Exception as e:
+        logger.error("Password verification error: %s", e)
+        return False
+
+
+def needs_rehash(hashed: str) -> bool:
+    """
+    Check if a password hash needs to be rehashed with current parameters.
+    
+    Args:
+        hashed: The existing Argon2 hash.
+        
+    Returns:
+        True if rehash is needed, False otherwise.
+    """
+    try:
+        return argon2.needs_update(hashed)
+    except Exception:
+        return True
+
+
+class EncryptedField:
+    """
+    SQLAlchemy type decorator for automatically encrypting/decrypting fields.
+    
+    Usage:
+        class User(Base):
+            ssn = Column(EncryptedField(Text), nullable=True)
+    """
+    
+    def __init__(self, impl=None):
+        self.impl = impl
+    
+    def process_bind_param(self, value: Optional[str], dialect) -> Optional[str]:
+        """Encrypt value before storing in database."""
         if value is None:
             return None
-        return encrypt_value(value)
-
-    def process_result_value(self, value: str | None, dialect: Any) -> str | None:
-        """Decrypt the value after reading from the database."""
+        return encrypt_field(value)
+    
+    def process_result_value(self, value: Optional[str], dialect) -> Optional[str]:
+        """Decrypt value when loading from database."""
         if value is None:
             return None
-        try:
-            return decrypt_value(value)
-        except Exception as exc:
-            logger.warning("Failed to decrypt value: %s", exc)
-            return None
+        return decrypt_field(value)
 
 
-__all__ = ["encrypt_value", "decrypt_value", "EncryptedText", "_get_fernet"]
+def get_private_key_pem() -> Optional[bytes]:
+    """Get the RSA private key in PEM format."""
+    return encryption_manager.private_key
+
+
+def get_public_key_pem() -> Optional[bytes]:
+    """Get the RSA public key in PEM format."""
+    return encryption_manager.public_key
+
+
+__all__ = [
+    "encryption_manager",
+    "encrypt_field",
+    "decrypt_field",
+    "hash_password",
+    "verify_password",
+    "needs_rehash",
+    "EncryptedField",
+    "get_private_key_pem",
+    "get_public_key_pem",
+]

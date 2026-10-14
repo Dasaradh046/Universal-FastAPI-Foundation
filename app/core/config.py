@@ -81,6 +81,19 @@ class Settings(BaseSettings):
     PASSWORD_BLOCKLIST_ENABLED: bool = False
     PASSWORD_BLOCKLIST: list[str] = Field(default_factory=list)
     
+    # Argon2 password hashing parameters
+    ARGON2_MEMORY_COST: int = 65536  # 64 MB
+    ARGON2_TIME_COST: int = 3
+    ARGON2_PARALLELISM: int = 4
+    ARGON2_HASH_LEN: int = 32
+    ARGON2_SALT_LEN: int = 16
+
+    # Account lockout policy
+    ACCOUNT_LOCKOUT_ENABLED: bool = True
+    MAX_FAILED_LOGIN_ATTEMPTS: int = 5
+    LOCKOUT_DURATION_MINUTES: int = 30
+    LOCKOUT_COOLDOWN_MINUTES: int = 15  # Time before failed attempts reset
+    
     # Rate limiting for auth endpoints
     LOGIN_RATE_LIMIT_REQUESTS: int = 5
     LOGIN_RATE_LIMIT_WINDOW: int = 900  # 15 minutes
@@ -104,6 +117,12 @@ class Settings(BaseSettings):
     # Email notifications
     NOTIFICATIONS_FROM_EMAIL: str | None = None
     NOTIFICATIONS_FROM_NAME: str | None = None
+
+    # Password reset token expiration
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 60
+    
+    # Email verification token expiration
+    EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS: int = 24
     
     # Storage
     STORAGE_PROVIDER: Literal["local", "minio", "s3", "gcs", "azure"] = "local"

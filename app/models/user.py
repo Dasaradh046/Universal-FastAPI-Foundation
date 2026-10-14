@@ -14,6 +14,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Integer,
     String,
     Text,
     text,
@@ -49,6 +50,19 @@ class Tenant(TenantBase, Base):
         Boolean, default=False, nullable=False, server_default=text("false")
     )
 
+    # Encrypted sensitive tenant data
+    billing_email_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    billing_address_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    tax_id_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    primary_contact_phone_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+
+    # Settings
+    timezone: Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)
+    locale: Mapped[str] = mapped_column(String(16), default="en-US", nullable=False)
+    password_policy_id: Mapped[uuid.UUID | None] = mapped_column(
+        SQL_UUID(as_uuid=True), nullable=True
+    )
+
     users: Mapped[list["User"]] = relationship(
         "User", back_populates="tenant", cascade="all, delete-orphan"
     )
@@ -58,7 +72,10 @@ class User(Base):
     """A login-capable account within a tenant."""
 
     __tablename__ = "users"
-    __table_args__ = ()
+    __table_args__ = (
+        # Unique constraint on email per tenant
+        # This is handled by the application layer for tenant isolation
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         SQL_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
@@ -72,13 +89,25 @@ class User(Base):
 
     # ---- Identity -------------------------------------------------------- #
     email: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
-    # The unique constraint is in __table_args__ below
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default=text("false")
+    )
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     name: Mapped[str | None] = mapped_column(String(160), nullable=True)
     first_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     job_title: Mapped[str | None] = mapped_column(String(120), nullable=True)
     avatar_color: Mapped[str | None] = mapped_column(String(16), nullable=True)
     initials: Mapped[str | None] = mapped_column(String(8), nullable=True)
+
+    # Encrypted PII fields
+    phone_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    address_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    date_of_birth_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    government_id_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+    emergency_contact_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
 
     # ---- Role & permissions ---------------------------------------------- #
     role: Mapped[Role] = mapped_column(
@@ -117,6 +146,21 @@ class User(Base):
         DateTime(timezone=True), nullable=True
     )
     last_login_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    # Password history for reuse prevention (stored as JSON array of hashes)
+    password_history_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
+
+    # ---- Account security (failed attempts, lockout) --------------------- #
+    failed_login_attempts: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False, server_default=text("0")
+    )
+    last_failed_login_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    locked_out_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    lockout_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # ---- Two-factor authentication --------------------------------------- #
     totp_secret_encrypted: Mapped[str | None] = mapped_column(
@@ -194,6 +238,15 @@ class User(Base):
     def requires_password_change(self) -> bool:
         """True when the portal must force a rotation."""
         return bool(self.must_change_password) or self.password_expired
+
+    @property
+    def is_locked_out(self) -> bool:
+        """True if the account is currently locked out."""
+        if self.locked_out_at is None:
+            return False
+        from app.core.config import settings
+        lockout_end = self.locked_out_at + timedelta(minutes=settings.LOCKOUT_DURATION_MINUTES)
+        return datetime.now(self.locked_out_at.tzinfo) < lockout_end
 
     @property
     def effective_roles(self) -> list[str]:
@@ -393,6 +446,40 @@ class PasswordResetToken(Base):
         return self.used_at is None and self.expires_at > datetime.now(UTC)
 
 
+class EmailVerificationToken(Base):
+    """Single-use email verification token."""
+
+    __tablename__ = "email_verification_tokens"
+    __table_args__ = (
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        SQL_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
+        server_default=text("gen_random_uuid()"),
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        SQL_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    requested_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, server_default=text("now()")
+    )
+
+    @property
+    def is_valid(self) -> bool:
+        """True if the token is unused and unexpired."""
+        from datetime import UTC
+
+        return self.used_at is None and self.expires_at > datetime.now(UTC)
+
+
 __all__ = [
     "Tenant",
     "User",
@@ -402,4 +489,5 @@ __all__ = [
     "UserRole",
     "UserSession",
     "PasswordResetToken",
+    "EmailVerificationToken",
 ]

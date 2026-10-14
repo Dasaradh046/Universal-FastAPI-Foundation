@@ -860,6 +860,97 @@ class AuthService:
         logger.info("Password reset completed: user=%s ip=%s", user.id, ip_address)
         return {"message": "Password reset successful. All sessions have been signed out."}
 
+    # ---- Email verification ---------------------------------------------- #
+
+    async def request_email_verification(
+        self, session: AsyncSession, email: str, ip_address: str | None = None
+    ) -> dict[str, str]:
+        """Email a single-use email verification link."""
+        user = await self._repo.get_by_email_global(session, email)
+        if user:
+            raw_token = secrets.token_urlsafe(32)
+            verification_row = EmailVerificationToken(
+                user_id=user.id,
+                token_hash=_hash_email_verification_token(raw_token),
+                expires_at=datetime.now(UTC)
+                + timedelta(hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS),
+                requested_ip=ip_address,
+            )
+            await self._repo.create_email_verification_token(session, verification_row)
+            await session.commit()
+
+            verification_url = f"{settings.FRONTEND_BASE_URL.rstrip('/')}/verify-email?token={raw_token}"
+            try:
+                from_email = EmailAddress(
+                    email=settings.NOTIFICATIONS_FROM_EMAIL or user.email,
+                    name=settings.NOTIFICATIONS_FROM_NAME or settings.APP_NAME,
+                )
+                await get_email_sender().send(
+                    EmailMessage(
+                        subject="Verify your email address",
+                        text_content=(
+                            f"Hi,\n\n"
+                            "We received a request to verify your email address.\n"
+                            "Open the link below to verify your email (valid for "
+                            f"{settings.EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS} "
+                            "hours):\n\n"
+                            f"{verification_url}\n\n"
+                            "If you did not request this, you can safely ignore this "
+                            "email.\n\n"
+                            "— Universal FastAPI Foundation"
+                        ),
+                        from_email=from_email,
+                        to_emails=[EmailAddress(email=user.email)],
+                    )
+                )
+            except Exception as exc:
+                logger.error("Failed to send email verification email: %s", exc)
+                raise ValidationError(
+                    "Could not send the verification email. Please try again later."
+                ) from exc
+
+            logger.info("Email verification requested: user=%s ip=%s", user.id, ip_address)
+        else:
+            logger.info("Email verification requested for unknown email=%s", email)
+
+        return {"message": "If an account with that email exists, a verification link has been sent."}
+
+    async def verify_email(
+        self,
+        session: AsyncSession,
+        token: str,
+        ip_address: str | None = None,
+    ) -> dict[str, str]:
+        """Consume an email verification token and mark the email as verified."""
+        if not token:
+            raise ValidationError("Email verification token is required.")
+
+        now = datetime.now(UTC)
+        verification_row = await self._repo.get_valid_email_verification_token(
+            session, _hash_email_verification_token(token), now
+        )
+        if verification_row is None:
+            raise ValidationError("Invalid or expired verification token.")
+
+        user = await session.get(User, verification_row.user_id)
+        if user is None or not user.is_active:
+            raise ValidationError("Invalid or expired verification token.")
+
+        if user.email_verified:
+            raise ValidationError("Email is already verified.")
+
+        # Mark email as verified
+        user.email_verified = True
+        user.email_verified_at = datetime.now(UTC)
+        await session.flush()
+
+        # Mark the token as used
+        await self._repo.mark_email_verification_token_used(session, verification_row.id)
+        await session.commit()
+
+        logger.info("Email verified: user=%s ip=%s", user.id, ip_address)
+        return {"message": "Email verified successfully."}
+
     async def accept_invitation(
         self,
         session: AsyncSession,
@@ -1037,6 +1128,13 @@ class AuthService:
 
 def _hash_reset_token(token: str) -> str:
     """SHA-256 hash of a reset token for storage."""
+    import hashlib
+
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _hash_email_verification_token(token: str) -> str:
+    """SHA-256 hash of an email verification token for storage."""
     import hashlib
 
     return hashlib.sha256(token.encode()).hexdigest()

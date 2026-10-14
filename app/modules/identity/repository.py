@@ -1,6 +1,7 @@
 """
 Repository for the identity module.
 """
+
 from __future__ import annotations
 
 from typing import List, Optional
@@ -8,9 +9,9 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.encryption import encrypt_field, hash_password
 from app.modules.identity.models import Tenant, User
 from app.modules.identity.schemas import TenantCreate, TenantUpdate, UserCreate, UserUpdate
-
 
 class TenantRepository:
     """Repository for tenant entities."""
@@ -41,10 +42,30 @@ class TenantRepository:
     
     async def create(self, obj_in: TenantCreate) -> Tenant:
         """Create a new tenant."""
-        db_obj = Tenant(
-            name=obj_in.name,
-            description=obj_in.description
-        )
+        # Extract plaintext fields for encryption
+        tenant_data = obj_in.model_dump(exclude_unset=True)
+        
+        # Encrypt sensitive fields
+        encrypted_fields = {}
+        for field in ['billing_email', 'billing_address', 'tax_id', 'primary_contact_phone']:
+            if field in tenant_data and tenant_data[field] is not None:
+                encrypted_value = encrypt_field(tenant_data[field])
+                encrypted_fields[f"{field}_encrypted"] = encrypted_value
+        
+        # Set defaults for settings if not provided
+        if 'timezone' not in tenant_data or tenant_data['timezone'] is None:
+            tenant_data['timezone'] = 'UTC'
+        if 'locale' not in tenant_data or tenant_data['locale'] is None:
+            tenant_data['locale'] = 'en-US'
+        
+        # Remove plaintext sensitive fields (they won't be stored)
+        for field in ['billing_email', 'billing_address', 'tax_id', 'primary_contact_phone']:
+            tenant_data.pop(field, None)
+        
+        # Add encrypted fields
+        tenant_data.update(encrypted_fields)
+        
+        db_obj = Tenant(**tenant_data)
         self.db.add(db_obj)
         await self.db.flush()
         await self.db.refresh(db_obj)
@@ -57,6 +78,19 @@ class TenantRepository:
     ) -> Tenant:
         """Update a tenant."""
         update_data = obj_in.model_dump(exclude_unset=True)
+        
+        # Encrypt sensitive fields if they are being updated
+        encrypted_fields = {}
+        for field in ['billing_email', 'billing_address', 'tax_id', 'primary_contact_phone']:
+            if field in update_data and update_data[field] is not None:
+                encrypted_value = encrypt_field(update_data[field])
+                encrypted_fields[f"{field}_encrypted"] = encrypted_value
+                # Remove the plaintext field from update_data
+                del update_data[field]
+        
+        # Add encrypted fields to update_data
+        update_data.update(encrypted_fields)
+        
         for field, value in update_data.items():
             setattr(db_obj, field, value)
         self.db.add(db_obj)
@@ -104,15 +138,16 @@ class UserRepository:
     
     async def create(self, obj_in: UserCreate, tenant_id: UUID) -> User:
         """Create a new user."""
-        # In a real implementation, we would hash the password here
-        # For now, we'll store it as-is (NOT SECURE - just for demonstration)
+        # Hash the password properly
+        hashed_password = hash_password(obj_in.password)
+        
         db_obj = User(
             email=obj_in.email,
             first_name=obj_in.first_name,
             last_name=obj_in.last_name,
             is_active=obj_in.is_active if obj_in.is_active is not None else True,
             is_superuser=obj_in.is_superuser if obj_in.is_superuser is not None else False,
-            password_hash=obj_in.password,  # TODO: Hash this properly
+            password_hash=hashed_password,  # Properly hashed password
             tenant_id=tenant_id
         )
         self.db.add(db_obj)
@@ -129,8 +164,10 @@ class UserRepository:
         update_data = obj_in.model_dump(exclude_unset=True)
         # Handle password separately if provided
         if 'password' in update_data:
-            # TODO: Hash the password properly
-            db_obj.password_hash = update_data.pop('password')
+            # Hash the password properly
+            hashed_password = hash_password(update_data['password'])
+            update_data['password_hash'] = hashed_password
+            del update_data['password']
         
         for field, value in update_data.items():
             setattr(db_obj, field, value)

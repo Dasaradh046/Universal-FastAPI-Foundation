@@ -12,6 +12,7 @@ from app.modules.identity.schemas import TenantCreate, TenantUpdate, UserCreate,
 from app.core.exceptions import NotFoundError, ConflictError
 from app.core.audit import AuditService
 from app.core.interfaces import IDatabaseService
+from app.core.encryption import hash_password, encrypt_field
 
 
 class TenantService:
@@ -112,7 +113,28 @@ class TenantService:
         if existing:
             raise ConflictError(f"Tenant with name '{obj_in.name}' already exists")
         
-        tenant = await self.tenant_repository.create(obj_in)
+        # Prepare tenant data with encrypted fields
+        tenant_data = obj_in.model_dump(exclude_unset=True)
+        
+        # Extract and encrypt sensitive fields
+        encrypted_fields = {}
+        for field in ['billing_email', 'billing_address', 'tax_id', 'primary_contact_phone']:
+            if field in tenant_data and tenant_data[field] is not None:
+                encrypted_value = encrypt_field(tenant_data[field])
+                encrypted_fields[f"{field}_encrypted"] = encrypted_value
+                # Remove the plaintext field from tenant_data
+                del tenant_data[field]
+        
+        # Add encrypted fields to tenant_data
+        tenant_data.update(encrypted_fields)
+        
+        # Set defaults for settings if not provided
+        if 'timezone' not in tenant_data or tenant_data['timezone'] is None:
+            tenant_data['timezone'] = 'UTC'
+        if 'locale' not in tenant_data or tenant_data['locale'] is None:
+            tenant_data['locale'] = 'en-US'
+        
+        tenant = await self.tenant_repository.create(tenant_data)
         
         await self._record_audit(
             action="tenant.create",
@@ -127,6 +149,8 @@ class TenantService:
                 "is_active": tenant.is_active,
                 "created_at": tenant.created_at.isoformat() if tenant.created_at else None,
                 "updated_at": tenant.updated_at.isoformat() if tenant.updated_at else None,
+                "timezone": tenant.timezone,
+                "locale": tenant.locale,
             },
             tenant_id=tenant.id,
             actor_user_id=actor_user_id,
@@ -152,6 +176,21 @@ class TenantService:
             if existing:
                 raise ConflictError(f"Tenant with name '{obj_in.name}' already exists")
         
+        # Prepare update data
+        update_data = obj_in.model_dump(exclude_unset=True)
+        
+        # Extract and encrypt sensitive fields if they are being updated
+        encrypted_fields = {}
+        for field in ['billing_email', 'billing_address', 'tax_id', 'primary_contact_phone']:
+            if field in update_data and update_data[field] is not None:
+                encrypted_value = encrypt_field(update_data[field])
+                encrypted_fields[f"{field}_encrypted"] = encrypted_value
+                # Remove the plaintext field from update_data
+                del update_data[field]
+        
+        # Add encrypted fields to update_data
+        update_data.update(encrypted_fields)
+        
         # Store before state for audit
         before_state = {
             "id": str(tenant.id),
@@ -160,10 +199,12 @@ class TenantService:
             "is_active": tenant.is_active,
             "created_at": tenant.created_at.isoformat() if tenant.created_at else None,
             "updated_at": tenant.updated_at.isoformat() if tenant.updated_at else None,
+            "timezone": tenant.timezone,
+            "locale": tenant.locale,
         }
         
         # Update the tenant
-        updated_tenant = await self.tenant_repository.update(tenant, obj_in)
+        updated_tenant = await self.tenant_repository.update(tenant, update_data)
         
         await self._record_audit(
             action="tenant.update",
@@ -178,6 +219,8 @@ class TenantService:
                 "is_active": updated_tenant.is_active,
                 "created_at": updated_tenant.created_at.isoformat() if updated_tenant.created_at else None,
                 "updated_at": updated_tenant.updated_at.isoformat() if updated_tenant.updated_at else None,
+                "timezone": updated_tenant.timezone,
+                "locale": updated_tenant.locale,
             },
             tenant_id=updated_tenant.id,
             actor_user_id=actor_user_id,
@@ -335,10 +378,8 @@ class UserService:
         if existing:
             raise ConflictError(f"User with email '{obj_in.email}' already exists")
         
-        # Hash the password (in a real implementation)
-        # For now, we'll store it as-is (NOT SECURE - just for demonstration)
-        # TODO: Implement proper password hashing using security.hash_password
-        hashed_password = obj_in.password  # Placeholder - should be hashed
+        # Hash the password properly
+        hashed_password = hash_password(obj_in.password)
         
         user = await self.user_repository.create(
             UserCreate(
@@ -347,7 +388,7 @@ class UserService:
                 last_name=obj_in.last_name,
                 is_active=obj_in.is_active,
                 is_superuser=obj_in.is_superuser,
-                password=hashed_password  # Using hashed password
+                password=hashed_password  # Properly hashed password
             ),
             tenant_id
         )
@@ -394,12 +435,10 @@ class UserService:
                 raise ConflictError(f"User with email '{obj_in.email}' already exists")
         
         # Hash the password if provided (in a real implementation)
-        # For now, we'll store it as-is (NOT SECURE - just for demonstration)
-        # TODO: Implement proper password hashing using security.hash_password
         update_data = obj_in.model_dump(exclude_unset=True)
         if 'password' in update_data:
-            # TODO: Hash the password properly
-            hashed_password = update_data['password']  # Placeholder - should be hashed
+            # Hash the password properly
+            hashed_password = hash_password(update_data['password'])
             update_data['password_hash'] = hashed_password
             del update_data['password']
         

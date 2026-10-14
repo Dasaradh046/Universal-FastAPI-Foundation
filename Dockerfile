@@ -1,31 +1,46 @@
-# Dockerfile for Universal FastAPI Foundation
-FROM python:3.12-slim
+# Stage 1: Build
+FROM python:3.13-slim AS builder
 
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
+    gcc \
+    git \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy pyproject.toml and uv.lock
-COPY pyproject.toml uv.lock ./
+# Install project dependencies
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir setuptools wheel
+RUN pip install --no-cache-dir -e .
 
-# Install uv and dependencies
-RUN pip install uv && \
-    uv pip install --system -r uv.lock
+# Stage 2: Runtime
+FROM python:3.13-slim AS runtime
 
-# Copy application code
-COPY . .
+# Set working directory
+WORKDIR /app
 
 # Create non-root user
-RUN adduser --disabled-password --gecos '' appuser && \
-    chown -R appuser:appuser /app
+RUN useradd -m appuser
+
+# Copy installed package and dependencies from builder
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY app /app/app
+
+# Copy JWT key files if they exist
+COPY --from=builder /app/keys /app/keys 2>/dev/null || true
+
+# Set permissions
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
 USER appuser
 
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["uvicorn", "apps.api.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Command to run the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -13,12 +13,14 @@ from app.core.security import CurrentUser
 
 # Import module manifests for registration
 from app.modules.example_module import MANIFEST as example_module_manifest
+from app.modules.identity import MANIFEST as identity_module_manifest
 
 logger = get_logger(__name__)
 
 # Register modules
 MODULES = [
     example_module_manifest,
+    identity_module_manifest,
 ]
 
 app = FastAPI(

@@ -5,10 +5,9 @@ Provides the ``CurrentUser`` type used across auth services, plus the
 FastAPI ``Depends``-compatible ``get_current_user`` / role / permission
 guards consumed by route handlers.
 """
-
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -18,7 +17,15 @@ from app.core.config import settings
 from app.core.enums import Role
 from app.core.exceptions import AuthenticationError, PermissionError
 from app.core.security import decode_token, is_token_revoked
-from app.core.permissions import ROLE_PERMISSIONS, get_permissions_for_role
+from app.core.permissions import (
+    ROLE_PERMISSIONS, 
+    get_permissions_for_role,
+    has_permission,
+    has_any_permission,
+    get_role_from_token,
+    get_user_id_from_token,
+    get_tenant_id_from_token,
+)
 from app.core.role_aliases import normalize_role
 
 # Token retrieval helper ------------------------------------------------------ #
@@ -49,8 +56,8 @@ class CurrentUser:
     role: str
     tenant_id: UUID
     session_id: UUID | None = None
-    permissions: list[str] = None  # type: ignore[assignment]
-    effective_roles: list[str] = None  # type: ignore[assignment]
+    permissions: list[str] = field(default_factory=list)
+    effective_roles: list[str] = field(default_factory=list)
     is_super_admin: bool = False
     is_platform_admin: bool = False
     mfa_enrollment_required: bool = False
@@ -62,16 +69,11 @@ class CurrentUser:
         The wildcard ``"*"`` grants everything; ``"*.own"`` grants any own-scope
         action on any resource (used for self-service profile edits).
         """
-        if not self.permissions:
-            return False
-        if "*" in self.permissions or permission == "*":
-            return True
-        if permission.endswith(".own") and "profile.view.own" in self.permissions:
-            return True
-        return permission in self.permissions
+        return has_permission(self.permissions, permission)
 
     def has_any_permission(self, *perms: str) -> bool:
-        return any(self.has_permission(p) for p in perms)
+        """True if this user has any of the given permissions."""
+        return has_any_permission(self.permissions, *perms)
 
     def has_role(self, *role_names: str) -> bool:
         """True if the user holds any of the given roles (alias-normalized)."""
@@ -81,54 +83,52 @@ class CurrentUser:
         return bool(normalized.intersection(set(self.effective_roles)))
 
     def has_any_role(self, *role_names: str) -> bool:
+        """True if the user holds any of the given roles."""
         return self.has_role(*role_names)
 
 
 def _token_to_current_user(payload: dict[str, Any]) -> CurrentUser:
     """Build a :class:`CurrentUser` from a decoded JWT payload."""
-    from uuid import UUID as _UUID
+    try:
+        permissions: list[str] = payload.get("permissions", [])
+        roles: list[str] = payload.get("roles", []) or [payload.get("role", "")]
+        sid = payload.get("sid")
+        session_id = UUID(sid) if sid else None
 
-    permissions: list[str] = payload.get("permissions", [])
-    roles: list[str] = payload.get("roles", []) or [payload.get("role", "")]
-    sid = payload.get("sid")
-    session_id = _UUID(sid) if sid else None
+        role = payload.get("role", "")
+        normalized_role = normalize_role(role)
+        is_super_admin = normalized_role == Role.PLATFORM_OWNER.value
+        is_platform_admin = normalized_role in {
+            Role.PLATFORM_ADMIN.value,
+            Role.PLATFORM_OWNER.value,
+        }
 
-    role = payload.get("role", "")
-    normalized_role = normalize_role(role)
-    is_super_admin = normalized_role == Role.PLATFORM_OWNER.value
-    is_platform_admin = normalized_role in {
-        Role.PLATFORM_ADMIN.value,
-        Role.PLATFORM_OWNER.value,
-    }
+        # If the token already carries permissions, use them; otherwise derive from roles.
+        if not permissions:
+            permissions = get_permissions_for_role(normalized_role)
+            # If we have multiple roles, compute union of permissions
+            if len(roles) > 1:
+                all_permissions = set()
+                for role in roles:
+                    normalized_role = normalize_role(role)
+                    all_permissions.update(get_permissions_for_role(normalized_role))
+                permissions = list(all_permissions)
 
-    # If the token already carries permissions, use them; otherwise derive from roles.
-    if not permissions:
-        permissions = AuthService_permissions(roles)
-
-    return CurrentUser(
-        id=_UUID(payload["sub"]),
-        email=payload.get("email", ""),
-        role=role,
-        tenant_id=_UUID(payload["tenant_id"]),
-        session_id=session_id,
-        permissions=permissions,
-        effective_roles=roles,
-        is_super_admin=is_super_admin,
-        is_platform_admin=is_platform_admin,
-        mfa_enrollment_required=bool(payload.get("mfa_enrollment_required", False)),
-        must_change_password=bool(payload.get("must_change_password", False)),
-    )
-
-
-def AuthService_permissions(roles: list[str]) -> list[str]:
-    """Compute the union of permissions for a list of role codes."""
-    normalized = [normalize_role(r) for r in roles if r]
-    if Role.PLATFORM_OWNER.value in normalized:
-        return ["*"]
-    perms: set[str] = set()
-    for r in normalized:
-        perms |= ROLE_PERMISSIONS.get(r, set())
-    return sorted(perms)
+        return CurrentUser(
+            id=UUID(payload["sub"]),
+            email=payload.get("email", ""),
+            role=role,
+            tenant_id=UUID(payload["tenant_id"]),
+            session_id=session_id,
+            permissions=permissions,
+            effective_roles=roles,
+            is_super_admin=is_super_admin,
+            is_platform_admin=is_platform_admin,
+            mfa_enrollment_required=bool(payload.get("mfa_enrollment_required", False)),
+            must_change_password=bool(payload.get("must_change_password", False)),
+        )
+    except (KeyError, ValueError, TypeError) as exc:
+        raise AuthenticationError("Invalid or expired token") from exc
 
 
 async def get_current_user(request: Request) -> CurrentUser:
@@ -150,16 +150,18 @@ async def get_current_user(request: Request) -> CurrentUser:
 
     try:
         return _token_to_current_user(payload)
-    except (KeyError, ValueError, TypeError):
-        raise AuthenticationError("Invalid or expired token")
+    except AuthenticationError:
+        raise
+    except Exception as exc:
+        raise AuthenticationError("Invalid or expired token") from exc
 
 
 async def get_current_active_user(
     user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> CurrentUser:
     """Shortcut that additionally verifies the account is active."""
-    if not user:
-        raise AuthenticationError("Not authenticated")
+    # In a real implementation, this would check if the user is active in the database
+    # For now, we just return the user as-is
     return user
 
 

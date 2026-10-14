@@ -1,21 +1,24 @@
 """
 SQLAlchemy models for the example module.
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from __future__ import annotations
+
+from typing import Optional
+
+from sqlalchemy import String, Text
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
-from app.models.base import Base
+
+from app.models.base import Base, TenantBase
 
 
-class Example(Base):
+class Example(Base, TenantBase):
     """Example model."""
     __tablename__ = "examples"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False, index=True)
-    description = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), 
-        server_default=func.now(), 
-        onupdate=func.now()
-    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+
+__all__ = ["Example"]

@@ -115,6 +115,8 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "platform_support.manage.all",
         "platform_support_access.view.all",
         "platform_support_access.request.all",
+        "platform_support_access.use.all",
+        "platform_audit.view.all",
         "profile.view.own",
     },
     "security_admin": {
@@ -133,16 +135,6 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "platform_security_policy.publish.all",
         "platform_security_event.view.all",
         "platform_operations.view.all",
-        "profile.view.own",
-    },
-    "support_admin": {
-        "platform_dashboard.view.all",
-        "platform_tenants.view.all",
-        "platform_support.view.all",
-        "platform_support_access.view.all",
-        "platform_support_access.request.all",
-        "platform_support_access.use.all",
-        "platform_audit.view.all",
         "profile.view.own",
     },
     "tenant_admin": {
@@ -207,8 +199,92 @@ def get_permissions_for_role(role: str) -> set[str]:
     return ROLE_PERMISSIONS.get(normalized, set())
 
 
+def has_permission(user_permissions: set[str] | list[str], permission: str) -> bool:
+    """Check if a user has a specific permission.
+    
+    Args:
+        user_permissions: Set or list of permission strings the user has
+        permission: Permission string to check
+        
+    Returns:
+        bool: True if user has the permission, False otherwise
+    """
+    if not user_permissions:
+        return False
+        
+    # Convert to set for efficient lookup
+    perms_set = set(user_permissions) if isinstance(user_permissions, list) else user_permissions
+    
+    # Wildcard permissions
+    if "*" in perms_set or permission == "*":
+        return True
+        
+    # Own-scope permissions (e.g., "*.own" grants any own-scope action)
+    if permission.endswith(".own"):
+        # Check if user has any own-scope permission
+        return any(p.endswith(".own") for p in perms_set)
+        
+    # Direct permission match
+    return permission in perms_set
+
+
+def has_any_permission(user_permissions: set[str] | list[str], *perms: str) -> bool:
+    """Check if a user has any of the specified permissions.
+    
+    Args:
+        user_permissions: Set or list of permission strings the user has
+        *perms: Permission strings to check
+        
+    Returns:
+        bool: True if user has any of the permissions, False otherwise
+    """
+    return any(has_permission(user_permissions, perm) for perm in perms)
+
+
+def get_role_from_token(payload: dict[str, Any]) -> str:
+    """Extract and normalize role from JWT payload.
+    
+    Args:
+        payload: Decoded JWT payload
+        
+    Returns:
+        str: Normalized role string
+    """
+    role = payload.get("role", "")
+    return normalize_role(role)
+
+
+def get_user_id_from_token(payload: dict[str, Any]) -> str:
+    """Extract user ID from JWT payload.
+    
+    Args:
+        payload: Decoded JWT payload
+        
+    Returns:
+        str: User ID
+    """
+    return payload.get("sub", "")
+
+
+def get_tenant_id_from_token(payload: dict[str, Any]) -> str:
+    """Extract tenant ID from JWT payload.
+    
+    Args:
+        payload: Decoded JWT payload
+        
+    Returns:
+        str: Tenant ID
+    """
+    return payload.get("tenant_id", "")
+
+
 __all__ = [
     "CANONICAL_PLATFORM_PERMISSIONS",
     "ROLE_PERMISSIONS",
     "get_permissions_for_role",
+    "has_permission",
+    "has_any_permission",
+    "get_role_from_token",
+    "get_user_id_from_token",
+    "get_tenant_id_from_token",
 ]

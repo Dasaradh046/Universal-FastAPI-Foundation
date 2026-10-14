@@ -1,7 +1,6 @@
 """
 Database configuration and session management.
 """
-
 from __future__ import annotations
 
 import sys
@@ -15,9 +14,11 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.pool import NullPool
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.exceptions import AppException
 
 logger = get_logger(__name__)
 
@@ -25,13 +26,18 @@ logger = get_logger(__name__)
 is_testing = "pytest" in sys.modules
 poolclass = NullPool if is_testing else None
 
-# Create async engine
+# Create async engine with production-ready settings
 engine: AsyncEngine = create_async_engine(
     settings.database_url,
     echo=settings.DEBUG,
     future=True,
     pool_pre_ping=True,
     poolclass=poolclass,
+    # Production-ready pool settings
+    pool_size=20,
+    max_overflow=30,
+    pool_timeout=30,
+    pool_recycle=1800,  # 30 minutes
 )
 
 # Create async session factory
@@ -56,6 +62,13 @@ async def get_db() -> AsyncIterator[AsyncSession]:
     async with session_factory() as session:
         try:
             yield session
+        except SQLAlchemyError as e:
+            await session.rollback()
+            logger.error(f"Database error occurred: {e}")
+            raise AppException(
+                status_code=500,
+                detail="Database service unavailable",
+            ) from e
         except Exception:
             await session.rollback()
             raise
@@ -69,15 +82,36 @@ async def get_async_session() -> AsyncIterator[AsyncSession]:
     Used by internal services that manage their own transaction boundaries.
     """
     async with session_factory() as session:
-        yield session
+        try:
+            yield session
+        except SQLAlchemyError as e:
+            await session.rollback()
+            logger.error(f"Database error occurred: {e}")
+            raise AppException(
+                status_code=500,
+                detail="Database service unavailable",
+            ) from e
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
 
 
 async def create_db_and_tables() -> None:
     """Create database tables."""
     from app.models.base import Base
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables created successfully")
+    except SQLAlchemyError as e:
+        logger.error(f"Failed to create database tables: {e}")
+        raise AppException(
+            status_code=500,
+            detail="Database initialization failed",
+        ) from e
 
 
 async def dispose_engine() -> None:
@@ -85,7 +119,29 @@ async def dispose_engine() -> None:
 
     Call this on application shutdown and in test teardown.
     """
-    await engine.dispose()
+    try:
+        await engine.dispose()
+        logger.info("Database connections disposed")
+    except SQLAlchemyError as e:
+        logger.error(f"Error disposing database engine: {e}")
+        raise AppException(
+            status_code=500,
+            detail="Database shutdown failed",
+        ) from e
+
+
+async def check_db_connection() -> bool:
+    """Check if database connection is healthy.
+    
+    Returns:
+        bool: True if connection is healthy, False otherwise
+    """
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return True
+    except SQLAlchemyError:
+        return False
 
 
 __all__ = [
@@ -95,4 +151,5 @@ __all__ = [
     "get_async_session",
     "create_db_and_tables",
     "dispose_engine",
+    "check_db_connection",
 ]

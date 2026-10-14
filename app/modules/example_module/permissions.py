@@ -1,25 +1,35 @@
 """
 Permissions for the example module.
 """
-# In a real implementation, this would contain permission checking logic
-# For now, it's a placeholder
+from __future__ import annotations
+
+from app.core.permissions import Permission
+
+# Example module permissions
+EXAMPLE_READ = Permission(
+    code="example:read",
+    name="Read Examples",
+    description="View example entities",
+    module="example_module",
+)
+
+EXAMPLE_WRITE = Permission(
+    code="example:write",
+    name="Write Examples",
+    description="Create, update, delete example entities",
+    module="example_module",
+)
+
+EXAMPLE_DELETE = Permission(
+    code="example:delete",
+    name="Delete Examples",
+    description="Delete example entities",
+    module="example_module",
+)
 
 
-def can_read_example(user_id: int) -> bool:
-    """Check if user can read examples."""
-    return True
-
-
-def can_create_example(user_id: int) -> bool:
-    """Check if user can create examples."""
-    return True
-
-
-def can_update_example(user_id: int) -> bool:
-    """Check if user can update examples."""
-    return True
-
-
-def can_delete_example(user_id: int) -> bool:
-    """Check if user can delete examples."""
-    return True
+__all__ = [
+    "EXAMPLE_READ",
+    "EXAMPLE_WRITE",
+    "EXAMPLE_DELETE",
+]

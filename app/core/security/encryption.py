@@ -17,7 +17,7 @@ from typing import Optional
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import serialization
-from passlib.hash import argon2
+from argon2 import PasswordHasher
 from sqlalchemy import Text, TypeDecorator
 
 logger = logging.getLogger(__name__)
@@ -77,11 +77,12 @@ class EncryptionManager:
     
     @property
     def fernet(self) -> Fernet:
-        """Get the Fernet instance for field encryption."""
+        "Get the Fernet instance for field extraction."
         if self._fernet is None:
             self._load_keys()
+        assert self._fernet is not None, 'Fernet key should be initialized by _load_keys'
         return self._fernet
-    
+
     @property
     def private_key(self) -> Optional[bytes]:
         """Get the RSA private key."""
@@ -158,13 +159,14 @@ def hash_password(password: str) -> str:
         Argon2 hashed password string.
     """
     from app.core.config import settings
-    return argon2.using(
-        memory_cost=settings.ARGON2_MEMORY_COST,
+    ph = PasswordHasher(
         time_cost=settings.ARGON2_TIME_COST,
+        memory_cost=settings.ARGON2_MEMORY_COST,
         parallelism=settings.ARGON2_PARALLELISM,
         hash_len=settings.ARGON2_HASH_LEN,
         salt_len=settings.ARGON2_SALT_LEN,
-    ).hash(password)
+    )
+    return ph.hash(password)
 
 
 def verify_password(password: str, hashed: str) -> bool:
@@ -179,7 +181,7 @@ def verify_password(password: str, hashed: str) -> bool:
         True if the password matches, False otherwise.
     """
     try:
-        return argon2.verify(password, hashed)
+        return PasswordHasher().verify(hashed, password)
     except Exception as e:
         logger.error("Password verification error: %s", e)
         return False
@@ -196,7 +198,7 @@ def needs_rehash(hashed: str) -> bool:
         True if rehash is needed, False otherwise.
     """
     try:
-        return argon2.needs_update(hashed)
+        return PasswordHasher().check_needs_rehash(hashed)
     except Exception:
         return True
 
@@ -244,3 +246,5 @@ __all__ = [
     "get_private_key_pem",
     "get_public_key_pem",
 ]
+
+

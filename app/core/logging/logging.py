@@ -10,6 +10,22 @@ from pathlib import Path
 
 from app.core.config.settings import settings
 
+_COLORS = {
+    "DEBUG": "\033[36m",    # cyan
+    "INFO": "\033[32m",     # green
+    "WARNING": "\033[33m",  # yellow
+    "ERROR": "\033[31m",    # red
+    "CRITICAL": "\033[35m", # magenta
+}
+_RESET = "\033[0m"
+
+
+class ColoredFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        color = _COLORS.get(record.levelname, "")
+        record.levelname = f"{color}{record.levelname}{_RESET}"
+        return super().format(record)
+
 
 def setup_logging() -> None:
     """Configure application logging."""
@@ -27,7 +43,7 @@ def setup_logging() -> None:
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
-    console_formatter = logging.Formatter(
+    console_formatter = ColoredFormatter(
         "%(asctime)s | %(levelname)-8s | %(name)s:%(lineno)d | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
@@ -42,7 +58,7 @@ def setup_logging() -> None:
         encoding="utf-8"
     )
     file_handler.setLevel(logging.DEBUG)
-    file_formatter = logging.Formatter(
+    file_formatter = ColoredFormatter(
         "%(asctime)s | %(levelname)-8s | %(name)s:%(lineno)d | %(funcName)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )

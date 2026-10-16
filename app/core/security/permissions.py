@@ -159,7 +159,7 @@ __all__ = [
 ]
 
 
-def get_permissions_for_role(role_code: str) -> set[str] | set():
+def get_permissions_for_role(role_code: str) -> Set[str]:
     """Get the set of permission codes for a given role.
     
     Args:

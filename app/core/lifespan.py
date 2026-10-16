@@ -4,6 +4,7 @@ Application lifespan events.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from fastapi import FastAPI
@@ -16,7 +17,7 @@ logger = get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> Any:
+async def lifespan(app: FastAPI) -> AsyncGenerator[Any, None]:
     """Application lifespan events."""
     # Setup logging
     setup_logging()

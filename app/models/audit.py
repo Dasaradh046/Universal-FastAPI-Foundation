@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import (
     UUID as SQL_UUID,
@@ -22,7 +22,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, UUIDPrimaryKey, TenantBase, TimestampMixin
 from app.models.enums import AuditAction
 
-
+if TYPE_CHECKING:
+    from app.models.user import User  # noqa: F401
 class AuditLog(TenantBase, TimestampMixin, Base):
     """Audit log entry for security and compliance tracking.
 

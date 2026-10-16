@@ -4,7 +4,7 @@ Interfaces for core services to ensure SOLID compliance and dependency inversion
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from app.core.config.settings import Settings
 from app.core.database.database import AsyncEngine, AsyncSession

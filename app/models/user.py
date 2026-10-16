@@ -24,13 +24,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.security.encryption import EncryptedText
 from app.models.base import Base, UUIDPrimaryKey, TenantBase, TimestampMixin
 from app.models.enums import Role
+from app.core.config import settings
 
 if TYPE_CHECKING:
     from app.models.tenant import Tenant
 
 
 # Role alias normalization
-from app.core.security.role_aliases import ROLE_ALIASES
 
 
 class User(UUIDPrimaryKey, TimestampMixin, Base):
@@ -159,7 +159,6 @@ class User(UUIDPrimaryKey, TimestampMixin, Base):
     @property
     def password_expired(self) -> bool:
         """True when the password is older than PASSWORD_EXPIRE_DAYS."""
-        from app.core.config import settings
 
         if not settings.PASSWORD_EXPIRATION_ENABLED:
             return False
@@ -172,7 +171,6 @@ class User(UUIDPrimaryKey, TimestampMixin, Base):
     @property
     def password_expires_soon(self) -> bool:
         """True when password will expire within PASSWORD_EXPIRE_WARNING_DAYS."""
-        from app.core.config import settings
         from datetime import UTC
 
         if not settings.PASSWORD_EXPIRATION_ENABLED:
@@ -196,7 +194,6 @@ class User(UUIDPrimaryKey, TimestampMixin, Base):
         """True if the account is currently locked out."""
         if self.locked_out_at is None:
             return False
-        from app.core.config import settings
         lockout_end = self.locked_out_at + timedelta(minutes=settings.LOCKOUT_DURATION_MINUTES)
         return datetime.now(self.locked_out_at.tzinfo) < lockout_end
 
@@ -211,14 +208,11 @@ class User(UUIDPrimaryKey, TimestampMixin, Base):
         if self.is_super_admin:
             return True
         effective = set(self.effective_roles)
-        normalized_names = set()
+        from app.core.security.role_aliases import normalize_role
         for name in role_names:
-            normalized_names.add(name)
-            normalized_names.add(__import__("app.core.role_aliases", fromlist=["normalize_role"]).normalize_role(name))
-        return bool(effective.intersection(normalized_names))
-
-    def __repr__(self) -> str:
-        return f"<User {self.email!r} (role={self.role})>"
+            if normalize_role(name) in effective:
+                return True
+        return False
 
 
 class RoleModel(TenantBase, Base):

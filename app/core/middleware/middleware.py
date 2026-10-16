@@ -103,15 +103,23 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+import contextvars
+
+tenant_context: contextvars.ContextVar[str | None] = contextvars.ContextVar("tenant_id", default=None)
+
+
 class TenantMiddleware(BaseHTTPMiddleware):
-    """Middleware for setting tenant context (placeholder for multi-tenancy)."""
-    
+    """Middleware for setting tenant context for multi-tenancy."""
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        # In a real implementation, this would:
-        # 1. Extract tenant ID from request (subdomain, header, JWT token)
-        # 2. Set the tenant context in the database session
-        # 3. Ensure proper cleanup after request
-        
-        # For now, it's a placeholder that just passes through
-        response = await call_next(request)
-        return response
+        tenant_id = request.headers.get("X-Tenant-ID")
+        if tenant_id:
+            request.state.tenant_id = tenant_id
+            token = tenant_context.set(tenant_id)
+            try:
+                response = await call_next(request)
+                return response
+            finally:
+                tenant_context.reset(token)
+        request.state.tenant_id = None
+        return await call_next(request)

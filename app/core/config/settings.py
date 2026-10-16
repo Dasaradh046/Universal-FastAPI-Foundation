@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     # Database - Full DSN (optional, overrides individual components if set)
     DATABASE_URL: str | None = None  # asyncpg URL
     DATABASE_URL_SYNC: str | None = None  # psycopg2 URL for Alembic
+
+    # Connection pool / timeout tuning (PostgreSQL / asyncpg)
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 30
+    DB_POOL_TIMEOUT: int = 30
+    DB_CONNECT_TIMEOUT_SECONDS: int = 10
+    DB_STATEMENT_TIMEOUT_SECONDS: int = 30
+    DB_IDLE_TRANSACTION_TIMEOUT_SECONDS: int = 300
     
     # Security
     SECRET_KEY: str = Field(

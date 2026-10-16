@@ -26,15 +26,17 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 import bcrypt
+from fastapi import Depends, Request
 from jose import JWTError, jwt
 
 from app.core.config.settings import settings
 from app.core.logging.logging import get_logger
-from app.core.exceptions.exceptions import AppException
+from app.core.exceptions.exceptions import AppException, AuthenticationError
+from app.models.enums import Role
 
 logger = get_logger(__name__)
 
@@ -366,12 +368,13 @@ def _render_qr_svg(uri: str) -> str:
     if not uri:
         raise ValueError("URI is required")
     
-    qr = qrcode.QRCode(box_size=10, border=4)
+    import qrcode.image.svg
+    qr = qrcode.QRCode(box_size=10, border=4, image_factory=qrcode.image.svg.SvgImage)
     qr.add_data(uri)
     qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
+    img = qr.make_image()
     buf = BytesIO()
-    img.save(buf, format="SVG")
+    img.save(buf)
     return buf.getvalue().decode()
 
 
@@ -554,11 +557,11 @@ class CurrentUser:
         The wildcard ``"*"`` grants everything; ``"*.own"`` grants any own-scope
         action on any resource (used for self-service profile edits).
         """
-        return has_permission(self.permissions, permission)
+        return has_permission(self.role, permission)
 
     def has_any_permission(self, *perms: str) -> bool:
         """True if this user has any of the given permissions."""
-        return has_any_permission(self.permissions, *perms)
+        return has_any_permission(self.role, [*perms])
 
     def has_role(self, *role_names: str) -> bool:
         """True if the user holds any of the given roles (alias-normalized)."""
@@ -590,7 +593,7 @@ def _token_to_current_user(payload: dict[str, Any]) -> CurrentUser:
 
         # If the token already carries permissions, use them; otherwise derive from roles.
         if not permissions:
-            permissions = get_permissions_for_role(normalized_role)
+            permissions = list(get_permissions_for_role(normalized_role))
             # If we have multiple roles, compute union of permissions
             if len(roles) > 1:
                 all_permissions = set()
@@ -739,3 +742,6 @@ __all__ = [
     "require_platform_admin",
     "require_tenant_admin",
 ]
+
+
+

@@ -66,10 +66,14 @@ class AuditService:
                 session.add(audit_entry)
                 await session.flush()
             else:
-                # Fallback: use db_service to get a session
-                async with self._db_service.get_session() as db_session:
+                # Fallback: use db_service to obtain a session
+                db_session = await self._db_service.get_session()
+                try:
                     db_session.add(audit_entry)
                     await db_session.flush()
+                    await db_session.commit()
+                finally:
+                    await db_session.close()
 
             logger.info(
                 "AUDIT: action=%s resource=%s resource_id=%s tenant=%s actor=%s description=%s ip=%s",

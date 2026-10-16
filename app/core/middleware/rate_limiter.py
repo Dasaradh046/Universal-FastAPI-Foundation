@@ -8,10 +8,11 @@ multi-instance deployments.
 
 from __future__ import annotations
 
+import threading
 import time
 from collections import defaultdict
 from functools import wraps
-from typing import Callable
+from typing import Any, Callable, Optional
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
@@ -23,6 +24,7 @@ logger = get_logger(__name__)
 
 # In-memory rate limit store: (ip, endpoint) -> list of timestamps
 _rate_limits: dict[tuple[str, str], list[float]] = defaultdict(list)
+_rate_limit_lock = threading.Lock()
 
 
 def _client_ip(request: Request) -> str:
@@ -48,19 +50,20 @@ def _enforce(
     ip = _client_ip(request)
     store_key = (ip, key)
     now = time.time()
-    timestamps = _rate_limits[store_key]
-    # Prune old entries
-    timestamps[:] = [t for t in timestamps if now - t < window_seconds]
-    if len(timestamps) >= requests:
-        logger.warning(
-            "Rate limit exceeded: ip=%s key=%s requests=%s window=%ss",
-            ip, key, requests, window_seconds,
-        )
-        retry_after = int(window_seconds - (now - timestamps[0])) if timestamps else window_seconds
-        raise PermissionError(
-            f"Rate limit exceeded. Try again in {retry_after} seconds."
-        )
-    timestamps.append(now)
+    with _rate_limit_lock:
+        timestamps = _rate_limits[store_key]
+        # Prune old entries
+        timestamps[:] = [t for t in timestamps if now - t < window_seconds]
+        if len(timestamps) >= requests:
+            logger.warning(
+                "Rate limit exceeded: ip=%s key=%s requests=%s window=%ss",
+                ip, key, requests, window_seconds,
+            )
+            retry_after = int(window_seconds - (now - timestamps[0])) if timestamps else window_seconds
+            raise PermissionError(
+                f"Rate limit exceeded. Try again in {retry_after} seconds."
+            )
+        timestamps.append(now)
 
 
 async def enforce_rate_limit(
@@ -86,14 +89,17 @@ def rate_limit(requests: int, window_seconds: int) -> Callable:
 
     def decorator(func: Callable) -> Callable:
         @wraps(func)
-        async def wrapper(*args: object, **kwargs: object) -> Response:
-            request = kwargs.get("request")
-            if not request:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            request: Optional[Request] = None
+            candidate = kwargs.get("request")
+            if isinstance(candidate, Request):
+                request = candidate
+            if request is None:
                 for arg in args:
                     if isinstance(arg, Request):
                         request = arg
                         break
-            if request:
+            if request is not None:
                 _enforce(request, f"{request.url.path}", requests, window_seconds)
             result = await func(*args, **kwargs)
             return result

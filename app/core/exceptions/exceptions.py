@@ -8,8 +8,6 @@ from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from typing import Any
 
-logger = ...  # Will be replaced with proper logger below
-
 from app.core.logging.logging import get_logger
 
 logger = get_logger(__name__)
@@ -89,8 +87,10 @@ UnauthorizedException = AuthenticationError
 ForbiddenException = PermissionError
 
 
-async def app_exception_handler(request: Request, exc: AppException):
+async def app_exception_handler(request: Request, exc: Exception):
     """Handle application exceptions."""
+    if not isinstance(exc, AppException):
+        raise exc
     logger.error("AppException: %s", exc.detail)
     return JSONResponse(
         status_code=exc.status_code,
@@ -99,8 +99,10 @@ async def app_exception_handler(request: Request, exc: AppException):
     )
 
 
-async def http_exception_handler(request: Request, exc: HTTPException):
+async def http_exception_handler(request: Request, exc: Exception):
     """Handle HTTP exceptions."""
+    if not isinstance(exc, HTTPException):
+        raise exc
     logger.error("HTTPException: %s", exc.detail)
     return JSONResponse(
         status_code=exc.status_code,

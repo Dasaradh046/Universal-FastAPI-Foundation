@@ -36,9 +36,11 @@ def register_exception_handlers(app: FastAPI):
     app.add_exception_handler(Exception, general_exception_handler)
 
 
-async def _validation_exception_handler(request: Request, exc: RequestValidationError):
+async def _validation_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle Pydantic validation errors."""
-    logger.warning(f"Validation error: {exc.errors()}")
+    if not isinstance(exc, RequestValidationError):
+        raise exc
+    logger.warning("Validation error: %s", exc.errors())
     return JSONResponse(
         status_code=422,
         content={

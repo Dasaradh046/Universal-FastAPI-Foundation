@@ -22,7 +22,6 @@ MANIFEST = ModuleManifest(
     router=router,
     models=[Example],
     permissions=[EXAMPLE_READ, EXAMPLE_WRITE],
-    migrations_path="app.modules.example_module.migrations",
 )
 
 # Export public interface

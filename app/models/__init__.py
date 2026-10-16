@@ -14,6 +14,8 @@ from app.models.user import (
     PasswordResetToken,
     EmailVerificationToken,
 )
+from app.models.example import Example
+from app.models.audit import AuditLog
 from app.models.enums import Role, AuditAction, TenantStatus
 
 __all__ = [
@@ -30,6 +32,8 @@ __all__ = [
     "UserSession",
     "PasswordResetToken",
     "EmailVerificationToken",
+    "Example",
+    "AuditLog",
     "Role",
     "AuditAction",
     "TenantStatus",

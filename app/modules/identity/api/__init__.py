@@ -1,10 +1,6 @@
-"""
-Identity module API router.
-"""
-from fastapi import APIRouter
-from app.modules.identity.api.v1.routes import router as identity_router_v1
+"""Identity module API package."""
+from __future__ import annotations
 
-router = APIRouter()
-router.include_router(identity_router_v1, prefix="/v1", tags=["identity"])
+from .router import router as api_router
 
-__all__ = ["router"]
+__all__ = ["api_router"]

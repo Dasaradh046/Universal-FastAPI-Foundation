@@ -1,18 +1,27 @@
 """
 API router for the example module.
+
+All endpoints use the application-wide ResponseEnvelope for consistent responses.
 """
+
 from __future__ import annotations
 
 from typing import List, Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer
-from app.modules.example_module.schemas import ExampleCreate, ExampleUpdate, ExampleResponse
+from fastapi import APIRouter, Depends, status
+from app.modules.example_module.schemas import (
+    ExampleCreate,
+    ExampleUpdate,
+    ExampleResponse,
+    ExampleResponseEnvelope,
+    ExampleListResponseEnvelope,
+)
 from app.modules.example_module.service import ExampleService
-from app.modules.example_module.dependencies import get_example_service_simple
+from app.modules.example_module.dependencies import get_example_service
 from app.core.dependencies import get_current_user, get_current_active_user
 from app.core.security import CurrentUser
+from app.schemas.common import ok, paginated
 
 router = APIRouter(
     prefix="/examples",
@@ -20,14 +29,11 @@ router = APIRouter(
     dependencies=[Depends(get_current_active_user)],  # Require authentication for all endpoints
 )
 
-# Security scheme for documentation
-security_scheme = HTTPBearer()
 
-
-@router.post("", response_model=ExampleResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ExampleResponseEnvelope, status_code=status.HTTP_201_CREATED)
 async def create_example(
     example_in: ExampleCreate,
-    service: Annotated[ExampleService, Depends(get_example_service_simple)],
+    service: Annotated[ExampleService, Depends(get_example_service)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ):
     """Create a new example."""
@@ -36,12 +42,12 @@ async def create_example(
         tenant_id=current_user.tenant_id,
         actor_user_id=current_user.id,
     )
-    return example
+    return created(data=example, message="Example created successfully")
 
 
-@router.get("", response_model=List[ExampleResponse])
+@router.get("", response_model=ExampleListResponseEnvelope)
 async def read_examples(
-    service: Annotated[ExampleService, Depends(get_example_service_simple)],
+    service: Annotated[ExampleService, Depends(get_example_service)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     skip: int = 0,
     limit: int = 100,
@@ -52,29 +58,29 @@ async def read_examples(
         skip=skip,
         limit=limit,
     )
-    return examples
+    # For pagination, we'd need total count - simplified for now
+    return ok(data=examples, message="Examples retrieved successfully")
 
 
-@router.get("/{example_id}", response_model=ExampleResponse)
+@router.get("/{example_id}", response_model=ExampleResponseEnvelope)
 async def read_example(
     example_id: UUID,
-    service: Annotated[ExampleService, Depends(get_example_service_simple)],
+    service: Annotated[ExampleService, Depends(get_example_service)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ):
     """Retrieve a specific example."""
     example = await service.get(
         id=example_id,
-        tenant_id=current_user.tenant_id,  # This will be checked in the service
+        tenant_id=current_user.tenant_id,
     )
-    # The service will handle tenant validation and raise NotFoundError if needed
-    return example
+    return ok(data=example, message="Example retrieved successfully")
 
 
-@router.put("/{example_id}", response_model=ExampleResponse)
+@router.put("/{example_id}", response_model=ExampleResponseEnvelope)
 async def update_example(
     example_id: UUID,
     example_in: ExampleUpdate,
-    service: Annotated[ExampleService, Depends(get_example_service_simple)],
+    service: Annotated[ExampleService, Depends(get_example_service)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ):
     """Update an example."""
@@ -84,24 +90,22 @@ async def update_example(
         tenant_id=current_user.tenant_id,
         actor_user_id=current_user.id,
     )
-    # The service will handle validation and raise appropriate errors
-    return example
+    return ok(data=example, message="Example updated successfully")
 
 
 @router.delete("/{example_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_example(
     example_id: UUID,
-    service: Annotated[ExampleService, Depends(get_example_service_simple)],
+    service: Annotated[ExampleService, Depends(get_example_service)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ):
     """Delete an example."""
-    success = await service.delete(
+    await service.delete(
         id=example_id,
         tenant_id=current_user.tenant_id,
         actor_user_id=current_user.id,
     )
-    # The service will handle validation and raise appropriate errors
-    # If we get here, the deletion was successful
+    # 204 No Content - no response body
     return None
 
 

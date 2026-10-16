@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.core.config import settings
-from app.core.logging import get_logger
+from app.core.config.settings import settings
+from app.core.logging.logging import get_logger
 
 logger = get_logger(__name__)
 

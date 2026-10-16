@@ -7,7 +7,7 @@ from fastapi.exceptions import HTTPException, RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
 
-from app.core.exceptions import (
+from app.core.exceptions.exceptions import (
     app_exception_handler,
     http_exception_handler,
     general_exception_handler,

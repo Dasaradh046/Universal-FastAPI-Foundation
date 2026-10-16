@@ -18,6 +18,7 @@ from typing import Optional
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import serialization
 from passlib.hash import argon2
+from sqlalchemy import Text, TypeDecorator
 
 logger = logging.getLogger(__name__)
 
@@ -200,29 +201,26 @@ def needs_rehash(hashed: str) -> bool:
         return True
 
 
-class EncryptedField:
-    """
-    SQLAlchemy type decorator for automatically encrypting/decrypting fields.
-    
-    Usage:
-        class User(Base):
-            ssn = Column(EncryptedField(Text), nullable=True)
-    """
-    
-    def __init__(self, impl=None):
-        self.impl = impl
-    
+class EncryptedField(TypeDecorator):
+    """SQLAlchemy type decorator for automatically encrypting/decrypting fields."""
+
+    impl = Text
+    cache_ok = True
+
     def process_bind_param(self, value: Optional[str], dialect) -> Optional[str]:
         """Encrypt value before storing in database."""
         if value is None:
             return None
         return encrypt_field(value)
-    
+
     def process_result_value(self, value: Optional[str], dialect) -> Optional[str]:
         """Decrypt value when loading from database."""
         if value is None:
             return None
         return decrypt_field(value)
+
+
+EncryptedText = EncryptedField(Text)
 
 
 def get_private_key_pem() -> Optional[bytes]:

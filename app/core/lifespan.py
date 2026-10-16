@@ -7,10 +7,10 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
-from app.core.database import create_db_and_tables, dispose_engine, check_db_connection
-from app.core.config import settings
-from app.core.logging import setup_logging, get_logger
-from app.core.security import _load_pem
+from app.core.database.database import create_db_and_tables, dispose_engine, check_db_connection
+from app.core.config.settings import settings
+from app.core.logging.logging import setup_logging, get_logger
+from app.core.security.security import _load_pem
 
 logger = get_logger(__name__)
 

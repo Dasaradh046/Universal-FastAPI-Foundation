@@ -16,8 +16,8 @@ from typing import Callable
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 
-from app.core.config import settings
-from app.core.logging import get_logger
+from app.core.config.settings import settings
+from app.core.logging.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -43,7 +43,7 @@ def _enforce(
 
     Raises ``PermissionError`` (429) if the rate limit is exceeded.
     """
-    from app.core.exceptions import PermissionError
+    from app.core.exceptions.exceptions import PermissionError
 
     ip = _client_ip(request)
     store_key = (ip, key)

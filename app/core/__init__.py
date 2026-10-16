@@ -12,44 +12,25 @@ from app.core.interfaces import (
     ConfigurationService,
 )
 
-# Re-export existing modules for backward compatibility
-from app.core import (
-    audit,
-    cache,
-    config,
-    database,
-    dependencies,
-    encryption,
-    exceptions,
-    lifespan,
-    logging,
-    middleware,
-    permissions,
-    role_aliases,
-    security,
-)
+# Subpackages
+from . import audit, cache, config, database, logging, middleware, security
+from . import lifespan
 
 __all__ = [
     # Interfaces
     "IDatabaseService",
     "IConfigurationService",
-    "ISecurityService", 
+    "ISecurityService",
     "IAuthService",
     "DatabaseService",
     "ConfigurationService",
-    
-    # Existing modules
+    # Subpackages
     "audit",
     "cache",
     "config",
     "database",
-    "dependencies",
-    "encryption",
-    "exceptions",
-    "lifespan",
     "logging",
     "middleware",
-    "permissions",
-    "role_aliases",
     "security",
+    "lifespan",
 ]

@@ -7,7 +7,7 @@ from __future__ import annotations
 import secrets
 from fastapi import Request, Response
 
-from app.core.logging import get_logger
+from app.core.logging.logging import get_logger
 
 logger = get_logger(__name__)
 

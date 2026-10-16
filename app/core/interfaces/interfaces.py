@@ -6,9 +6,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Protocol, runtime_checkable
 
-from app.core.config import Settings
-from app.core.database import AsyncEngine, AsyncSession
-from app.core.security import CurrentUser
+from app.core.config.settings import Settings
+from app.core.database.database import AsyncEngine, AsyncSession
+from app.core.security.security import CurrentUser
 
 
 @runtime_checkable
@@ -115,23 +115,23 @@ class DatabaseService:
     
     async def get_session(self) -> AsyncSession:
         """Get a database session."""
-        from app.core.database import session_factory
+        from app.core.database.database import session_factory
         async with session_factory() as session:
             return session
     
     async def create_tables(self) -> None:
         """Create database tables."""
-        from app.core.database import create_db_and_tables
+        from app.core.database.database import create_db_and_tables
         await create_db_and_tables()
     
     async def dispose_engine(self) -> None:
         """Dispose of the database engine."""
-        from app.core.database import dispose_engine
+        from app.core.database.database import dispose_engine
         await dispose_engine()
     
     async def check_connection(self) -> bool:
         """Check database connection health."""
-        from app.core.database import check_db_connection
+        from app.core.database.database import check_db_connection
         return await check_db_connection()
 
 

@@ -21,7 +21,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.encryption import EncryptedText
+from app.core.security.encryption import EncryptedText
 from app.models.base import Base, UUIDPrimaryKey, TenantBase, TimestampMixin
 from app.models.enums import Role
 
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 # Role alias normalization
-from app.core.role_aliases import ROLE_ALIASES
+from app.core.security.role_aliases import ROLE_ALIASES
 
 
 class User(UUIDPrimaryKey, TimestampMixin, Base):

@@ -32,9 +32,9 @@ from uuid import UUID
 import bcrypt
 from jose import JWTError, jwt
 
-from app.core.config import settings
-from app.core.logging import get_logger
-from app.core.exceptions import AppException
+from app.core.config.settings import settings
+from app.core.logging.logging import get_logger
+from app.core.exceptions.exceptions import AppException
 
 logger = get_logger(__name__)
 
@@ -502,11 +502,7 @@ def generate_temporary_password(length: int = 16) -> str:
 
 # CurrentUser class for authentication context
 from dataclasses import dataclass, field
-from typing import List, Annotated
-from fastapi import Depends, HTTPException, Request, status
-from app.models.enums import Role
-from app.core.security import decode_token, is_token_revoked
-from app.core.permissions import (
+from .permissions import (
     ROLE_PERMISSIONS, 
     get_permissions_for_role,
     has_permission,
@@ -515,7 +511,7 @@ from app.core.permissions import (
     get_user_id_from_token,
     get_tenant_id_from_token,
 )
-from app.core.role_aliases import normalize_role
+from .role_aliases import normalize_role
 
 # Token retrieval helper ------------------------------------------------------ #
 

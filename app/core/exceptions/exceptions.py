@@ -10,7 +10,7 @@ from typing import Any
 
 logger = ...  # Will be replaced with proper logger below
 
-from app.core.logging import get_logger
+from app.core.logging.logging import get_logger
 
 logger = get_logger(__name__)
 

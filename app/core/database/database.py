@@ -16,9 +16,9 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.core.config import settings
-from app.core.logging import get_logger
-from app.core.exceptions import AppException
+from app.core.config.settings import settings
+from app.core.logging.logging import get_logger
+from app.core.exceptions.exceptions import AppException
 
 logger = get_logger(__name__)
 

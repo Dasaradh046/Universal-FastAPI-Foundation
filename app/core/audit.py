@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from app.core.enums import AuditAction
+from app.models.enums import AuditAction
 from app.core.logging import get_logger
 from app.core.interfaces import IDatabaseService
 from app.core.exceptions import AppException
@@ -72,7 +72,7 @@ class AuditService:
             #     )
             #     session.add(audit_entry)
             #     await session.commit()
-                
+            
         except Exception as exc:
             logger.error(f"Failed to record audit event: {exc}")
             # Don't raise exception as audit failure shouldn't break the main operation

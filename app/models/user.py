@@ -22,53 +22,18 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.encryption import EncryptedText
-from app.models.base import Base, UUIDPrimaryKey, TenantBase
-from app.core.enums import Role
+from app.models.base import Base, UUIDPrimaryKey, TenantBase, TimestampMixin
+from app.models.enums import Role
 
 if TYPE_CHECKING:
     from app.models.tenant import Tenant
+
 
 # Role alias normalization
 from app.core.role_aliases import ROLE_ALIASES
 
 
-class Tenant(TenantBase, Base):
-    """Organization/tenant record."""
-
-    __tablename__ = "tenants"
-    __table_args__ = ()
-
-    name: Mapped[str] = mapped_column(String(160), nullable=False)
-    slug: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
-    status: Mapped[str] = mapped_column(
-        Enum("ACTIVE", "TRIAL", "SUSPENDED", "ARCHIVED", name="tenant_status"),
-        default="ACTIVE",
-        nullable=False,
-    )
-    plan: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    is_platform: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False, server_default=text("false")
-    )
-
-    # Encrypted sensitive tenant data
-    billing_email_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
-    billing_address_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
-    tax_id_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
-    primary_contact_phone_encrypted: Mapped[str | None] = mapped_column(EncryptedText, nullable=True)
-
-    # Settings
-    timezone: Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)
-    locale: Mapped[str] = mapped_column(String(16), default="en-US", nullable=False)
-    password_policy_id: Mapped[uuid.UUID | None] = mapped_column(
-        SQL_UUID(as_uuid=True), nullable=True
-    )
-
-    users: Mapped[list["User"]] = relationship(
-        "User", back_populates="tenant", cascade="all, delete-orphan"
-    )
-
-
-class User(Base):
+class User(UUIDPrimaryKey, TimestampMixin, Base):
     """A login-capable account within a tenant."""
 
     __tablename__ = "users"
@@ -77,10 +42,6 @@ class User(Base):
         # This is handled by the application layer for tenant isolation
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        SQL_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
-        server_default=text("gen_random_uuid()"),
-    )
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         SQL_UUID(as_uuid=True),
         ForeignKey("tenants.id", ondelete="CASCADE"),
@@ -186,15 +147,6 @@ class User(Base):
         Boolean, default=False, server_default=text("false"), nullable=False, index=True
     )
 
-    # ---- Audit fields ---------------------------------------------------- #
-    created_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True,
-        server_default=text("now()"), index=True,
-    )
-    updated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, server_default=text("now()"),
-    )
-
     # ---- Relationships --------------------------------------------------- #
     tenant: Mapped["Tenant | None"] = relationship(
         "Tenant", back_populates="users", foreign_keys="User.tenant_id"
@@ -277,8 +229,7 @@ class RoleModel(TenantBase, Base):
     """
 
     __tablename__ = "roles"
-    __table_args__ = (
-    )
+    __table_args__ = ()
 
     code: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
@@ -302,8 +253,7 @@ class Permission(TenantBase, Base):
     """Granular permission (e.g. 'employees.create', 'payroll.publish')."""
 
     __tablename__ = "permissions"
-    __table_args__ = (
-    )
+    __table_args__ = ()
 
     code: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
@@ -316,8 +266,7 @@ class RolePermission(UUIDPrimaryKey, Base):
     """Junction table: many-to-many between RoleModel and Permission."""
 
     __tablename__ = "role_permissions"
-    __table_args__ = (
-    )
+    __table_args__ = ()
 
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         SQL_UUID(as_uuid=True), nullable=False, index=True
@@ -341,8 +290,7 @@ class UserRole(TenantBase, Base):
     """
 
     __tablename__ = "user_roles"
-    __table_args__ = (
-    )
+    __table_args__ = ()
 
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         SQL_UUID(as_uuid=True), nullable=False, index=True
@@ -365,8 +313,7 @@ class UserSession(Base):
     """
 
     __tablename__ = "user_sessions"
-    __table_args__ = (
-    )
+    __table_args__ = ()
 
     id: Mapped[uuid.UUID] = mapped_column(
         SQL_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
@@ -416,8 +363,7 @@ class PasswordResetToken(Base):
     """Single-use password reset / invitation token."""
 
     __tablename__ = "password_reset_tokens"
-    __table_args__ = (
-    )
+    __table_args__ = ()
 
     id: Mapped[uuid.UUID] = mapped_column(
         SQL_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
@@ -450,8 +396,7 @@ class EmailVerificationToken(Base):
     """Single-use email verification token."""
 
     __tablename__ = "email_verification_tokens"
-    __table_args__ = (
-    )
+    __table_args__ = ()
 
     id: Mapped[uuid.UUID] = mapped_column(
         SQL_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
@@ -481,7 +426,6 @@ class EmailVerificationToken(Base):
 
 
 __all__ = [
-    "Tenant",
     "User",
     "RoleModel",
     "Permission",

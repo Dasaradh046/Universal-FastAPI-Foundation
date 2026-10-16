@@ -4,7 +4,7 @@ Role aliases and normalization for backward compatibility.
 
 from __future__ import annotations
 
-from app.core.enums import Role
+from app.models.enums import Role
 
 ROLE_ALIASES: dict[str, str] = {
     "super_admin": Role.PLATFORM_OWNER.value,

@@ -242,7 +242,7 @@ def decode_token(token: str) -> dict[str, Any] | None:
     """
     if not token or not isinstance(token, str):
         return None
-        
+    
     algorithm = _effective_algorithm()
     try:
         # Pin the algorithm: exactly the configured algorithm, never a list
@@ -278,7 +278,7 @@ def revoke_token(jti: str, exp: int) -> None:
     """Add a token's jti to the blacklist until its natural expiry."""
     if not jti or not isinstance(jti, str):
         return
-        
+    
     _TOKEN_REVOCATIONS[jti] = exp
 
 
@@ -286,7 +286,7 @@ def is_token_revoked(jti: str) -> bool:
     """Check if a token's jti is blacklisted and not yet expired."""
     if not jti or not isinstance(jti, str):
         return False
-        
+    
     exp = _TOKEN_REVOCATIONS.get(jti)
     if exp is None:
         return False
@@ -337,7 +337,7 @@ def verify_totp(secret: str, token: str, window: int = 1) -> bool:
 
     if not secret or not token:
         return False
-        
+    
     try:
         totp = pyotp.TOTP(secret)
         return totp.verify(token, valid_window=window)
@@ -351,7 +351,7 @@ def otpauth_uri(secret: str, account: str, issuer: str) -> str:
 
     if not secret or not account or not issuer:
         raise ValueError("Secret, account, and issuer are required")
-        
+    
     return (
         f"otpauth://totp/{urllib.parse.quote(issuer)}:"
         f"{urllib.parse.quote(account)}?secret={secret}&issuer={urllib.parse.quote(issuer)}"
@@ -365,7 +365,7 @@ def _render_qr_svg(uri: str) -> str:
 
     if not uri:
         raise ValueError("URI is required")
-        
+    
     qr = qrcode.QRCode(box_size=10, border=4)
     qr.add_data(uri)
     qr.make(fit=True)
@@ -381,7 +381,7 @@ def generate_recovery_codes(count: int = 10, length: int = 10) -> list[str]:
 
     if count <= 0:
         return []
-        
+    
     alphabet = string.ascii_uppercase + string.digits
     return [
         "".join(secrets.choice(alphabet) for _ in range(length))
@@ -395,7 +395,7 @@ def hash_recovery_codes(codes: list[str]) -> str:
 
     if not codes:
         return ""
-        
+    
     return "\n".join(hashlib.sha256(c.encode()).hexdigest() for c in codes)
 
 
@@ -409,7 +409,7 @@ def redeem_recovery_code(stored_hashes: str, token: str) -> str | None:
 
     if not stored_hashes or not token:
         return None
-        
+    
     try:
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         lines = stored_hashes.splitlines()
@@ -447,7 +447,7 @@ def check_password_strength(password: str) -> PasswordStrength:
             score=0,
             suggestions=["Password cannot be empty"]
         )
-        
+    
     score = 0
     suggestions: list[str] = []
 
@@ -492,7 +492,7 @@ def generate_temporary_password(length: int = 16) -> str:
 
     if length < 8:
         length = 16  # Minimum secure length
-        
+    
     alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
     while True:
         pwd = "".join(secrets.choice(alphabet) for _ in range(length))
@@ -504,7 +504,7 @@ def generate_temporary_password(length: int = 16) -> str:
 from dataclasses import dataclass, field
 from typing import List, Annotated
 from fastapi import Depends, HTTPException, Request, status
-from app.core.enums import Role
+from app.models.enums import Role
 from app.core.security import decode_token, is_token_revoked
 from app.core.permissions import (
     ROLE_PERMISSIONS, 
@@ -525,7 +525,7 @@ def _extract_token(request: Request) -> str | None:
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         return auth_header[len("Bearer ") :].strip()
-
+    
     cookie_name = settings.COOKIE_ACCESS_NAME
     cookie_token = request.cookies.get(cookie_name)
     if cookie_token:

@@ -3,8 +3,8 @@ Models package — centralized SQLAlchemy model definitions.
 """
 
 from app.models.base import Base, UUIDPrimaryKey, TimestampMixin, TenantBase
+from app.models.tenant import Tenant
 from app.models.user import (
-    Tenant,
     User,
     RoleModel,
     Permission,

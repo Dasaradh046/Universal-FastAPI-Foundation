@@ -14,7 +14,7 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, Request, status
 
 from app.core.config import settings
-from app.core.enums import Role
+from app.models.enums import Role
 from app.core.exceptions import AuthenticationError, PermissionError
 from app.core.security import decode_token, is_token_revoked
 from app.core.permissions import (

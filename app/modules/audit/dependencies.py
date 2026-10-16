@@ -10,7 +10,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import AuditService, get_audit_service
+from app.core.audit import AuditService, get_core_audit_service
 from app.core.database import get_db
 from app.core.interfaces import IDatabaseService, DatabaseService
 from app.modules.audit.repository import AuditRepository
@@ -26,7 +26,7 @@ def get_audit_repository(
 
 def get_audit_service(
     repository: Annotated[AuditRepository, Depends(get_audit_repository)],
-    audit_service: Annotated[AuditService, Depends(get_audit_service)],
+    audit_service: Annotated[AuditService, Depends(get_core_audit_service)],
     db_service: Annotated[IDatabaseService, Depends(lambda: DatabaseService())],
 ) -> AuditServiceModule:
     """Get audit service with all dependencies injected."""

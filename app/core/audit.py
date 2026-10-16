@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.audit import AuditLog
 from app.models.enums import AuditAction
 from app.core.logging import get_logger
-from app.core.interfaces import IDatabaseService
+from app.core.interfaces import IDatabaseService, DatabaseService
 
 logger = get_logger(__name__)
 
@@ -145,7 +145,14 @@ async def record_audit(
         # In production, we might want to send to a dead letter queue or alerting system
 
 
+def get_core_audit_service() -> AuditService:
+    """Dependency to get AuditService instance with database service."""
+    from app.core.database import engine
+    return AuditService(DatabaseService(engine))
+
+
 __all__ = [
     "AuditService",
+    "get_core_audit_service",
     "record_audit",
 ]

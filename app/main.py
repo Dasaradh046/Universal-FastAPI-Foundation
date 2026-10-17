@@ -1,14 +1,26 @@
 """
 Main FastAPI application entry point.
 """
+
 from __future__ import annotations
 
-from fastapi import FastAPI, Depends
-from app.core.lifespan import lifespan
+from typing import Annotated
+
+from fastapi import Depends, FastAPI
+
 from app.api.router import api_router
 from app.core.config import settings
-from app.core.logging import get_logger
 from app.core.dependencies import get_current_user
+from app.core.exceptions.handlers import register_exception_handlers
+from app.core.lifespan import lifespan
+from app.core.logging import get_logger
+from app.core.middleware.middleware import (
+    LoggingMiddleware,
+    ProcessTimeMiddleware,
+    SecurityHeadersMiddleware,
+    TenantMiddleware,
+)
+from app.core.observability.prometheus import PrometheusMiddleware
 from app.core.security import CurrentUser
 
 # Import module manifests for registration
@@ -27,8 +39,18 @@ app = FastAPI(
     title="Universal FastAPI Foundation",
     description="A reusable, integration-ready FastAPI application platform",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
+
+# Register exception handlers
+register_exception_handlers(app)
+
+# Register middleware (order matters: last added runs first on request)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(ProcessTimeMiddleware)
+app.add_middleware(LoggingMiddleware)
+app.add_middleware(TenantMiddleware)
+app.add_middleware(PrometheusMiddleware)
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
@@ -38,7 +60,8 @@ for module in MODULES:
     app.include_router(
         module.router,
         prefix=settings.API_V1_STR,
-        dependencies=[Depends(get_current_user)],  # Require authentication for module endpoints
+        dependencies=[Depends(get_current_user)],
+        # Require authentication for module endpoints
     )
 
 
@@ -49,7 +72,7 @@ async def root():
         "message": "Universal FastAPI Foundation",
         "version": "0.1.0",
         "docs": "/docs",
-        "redoc": "/redoc"
+        "redoc": "/redoc",
     }
 
 
@@ -59,7 +82,7 @@ async def health_check():
     return {
         "status": "healthy",
         "version": "0.1.0",
-        "environment": settings.ENVIRONMENT
+        "environment": settings.ENVIRONMENT,
     }
 
 
@@ -83,11 +106,8 @@ async def app_info(current_user: Annotated[CurrentUser, Depends(get_current_user
                 "version": module.version,
             }
             for module in MODULES
-        ]
+        ],
     }
 
-
-# Import Annotated for the endpoint above
-from typing import Annotated
 
 __all__ = ["app"]

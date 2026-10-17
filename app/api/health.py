@@ -1,14 +1,17 @@
 """
 Health check endpoints.
 """
+
 from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
+
 from app.core.config import settings
 from app.core.database import check_db_connection
 from app.core.logging import get_logger
+from app.core.observability.prometheus import metrics_endpoint
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -20,7 +23,7 @@ async def health_check():
     return {
         "status": "healthy",
         "app_name": settings.APP_NAME,
-        "app_version": settings.APP_VERSION
+        "app_version": settings.APP_VERSION,
     }
 
 
@@ -30,10 +33,10 @@ async def detailed_health_check():
     try:
         # Check database connection
         db_healthy = await check_db_connection()
-        
+
         # Determine overall status
         overall_status = "healthy" if db_healthy else "unhealthy"
-        
+
         # Prepare response
         response: dict[str, Any] = {
             "status": overall_status,
@@ -41,28 +44,28 @@ async def detailed_health_check():
             "app_version": settings.APP_VERSION,
             "environment": settings.ENVIRONMENT,
             "database": "connected" if db_healthy else "disconnected",
-            "version": settings.APP_VERSION
+            "version": settings.APP_VERSION,
         }
-        
+
         # Add additional checks as needed
         # For example, Redis, external services, etc.
-        
+
         if overall_status == "unhealthy":
             logger.warning("Health check failed: database disconnected")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Service unhealthy"
+                detail="Service unhealthy",
             )
-        
+
         return response
-        
+
     except HTTPException:
         raise
     except Exception as exc:
         logger.error(f"Error during health check: {exc}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Health check failed"
+            detail="Health check failed",
         )
 
 
@@ -71,19 +74,18 @@ async def readiness_check():
     """Readiness check endpoint for Kubernetes."""
     try:
         db_ready = await check_db_connection()
-        
+
         if db_ready:
             return {"status": "ready"}
         else:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Service not ready"
+                detail="Service not ready",
             )
     except Exception as exc:
         logger.error(f"Error during readiness check: {exc}")
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Service not ready"
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Service not ready"
         )
 
 
@@ -92,6 +94,12 @@ async def liveness_check():
     """Liveness check endpoint for Kubernetes."""
     # Simple liveness check - if the app is running, it's alive
     return {"status": "alive"}
+
+
+@router.get("/metrics", tags=["health"])
+async def prometheus_metrics():
+    """Prometheus metrics endpoint."""
+    return await metrics_endpoint()
 
 
 __all__ = ["router"]

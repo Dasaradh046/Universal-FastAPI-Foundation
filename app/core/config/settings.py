@@ -13,7 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """Application settings."""
-    
+
     model_config = SettingsConfigDict(
         case_sensitive=True,
         env_file=".env",
@@ -26,17 +26,17 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
     ENVIRONMENT: Literal["local", "development", "staging", "prod"] = "local"
-    
+
     # API
     API_V1_STR: str = "/api/v1"
-    
+
     # Database - Individual components (preferred method)
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
     DB_USER: str = "postgres"
     DB_PASSWORD: str = Field(default="postgres", validation_alias="DB_PASSWORD")
     DB_NAME: str = "ubf"
-    
+
     # Database - Full DSN (optional, overrides individual components if set)
     DATABASE_URL: str | None = None  # asyncpg URL
     DATABASE_URL_SYNC: str | None = None  # psycopg2 URL for Alembic
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     DB_CONNECT_TIMEOUT_SECONDS: int = 10
     DB_STATEMENT_TIMEOUT_SECONDS: int = 30
     DB_IDLE_TRANSACTION_TIMEOUT_SECONDS: int = 300
-    
+
     # Security
     SECRET_KEY: str = Field(
         default="change-me-in-prod-a-strong-secret-key-min-32-chars-long",
@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes - short lived access
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     ALGORITHM: str = "HS256"
-    
+
     # JWT Algorithm options: HS256 (symmetric) or RS256 (asymmetric)
     # RS256 requires generating a keypair with scripts/generate_keys.py
     JWT_ALGORITHM: Literal["HS256", "RS256"] = "HS256"
@@ -67,20 +67,20 @@ class Settings(BaseSettings):
     JWT_AUDIENCE: str = "universal-fastapi-foundation-users"
     JWT_LEEWAY_SECONDS: int = 10  # Clock leeway for expiration validation
     JWT_KEY_ID: str | None = None  # Key ID for JWKS/rotation support
-    
+
     # Cookie settings for httpOnly JWT transport
     COOKIE_ACCESS_NAME: str = "ph_access_token"
     COOKIE_REFRESH_NAME: str = "ph_refresh_token"
     COOKIE_SAMESITE: Literal["strict", "lax", "none"] = "lax"
-    
+
     # Frontend settings
     FRONTEND_BASE_URL: str = "http://localhost:3000"
-    
+
     # MFA / 2FA settings
     MFA_TOKEN_EXPIRE_MINUTES: int = 5
     TWO_FACTOR_PENDING_TIMEOUT_MINUTES: int = 30
     TWO_FACTOR_ISSUER: str = "Universal FastAPI Foundation"
-    
+
     # Password policy
     PASSWORD_MIN_LENGTH: int = 12
     PASSWORD_EXPIRATION_ENABLED: bool = True
@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     PASSWORD_EXPIRE_WARNING_DAYS: int = 7
     PASSWORD_BLOCKLIST_ENABLED: bool = False
     PASSWORD_BLOCKLIST: list[str] = Field(default_factory=list)
-    
+
     # Argon2 password hashing parameters
     ARGON2_MEMORY_COST: int = 65536  # 64 MB
     ARGON2_TIME_COST: int = 3
@@ -101,18 +101,18 @@ class Settings(BaseSettings):
     MAX_FAILED_LOGIN_ATTEMPTS: int = 5
     LOCKOUT_DURATION_MINUTES: int = 30
     LOCKOUT_COOLDOWN_MINUTES: int = 15  # Time before failed attempts reset
-    
+
     # Rate limiting for auth endpoints
     LOGIN_RATE_LIMIT_REQUESTS: int = 5
     LOGIN_RATE_LIMIT_WINDOW: int = 900  # 15 minutes
     MFA_RATE_LIMIT_REQUESTS: int = 10
     MFA_RATE_LIMIT_WINDOW: int = 900  # 15 minutes
-    
+
     # Refresh token rotation
     REFRESH_TOKEN_ROTATION_ENABLED: bool = True
     REFRESH_TOKEN_SLIDING_EXPIRATION: bool = False
     SESSION_ABSOLUTE_MAX_DAYS: int = 90
-    
+
     # Email
     EMAIL_PROVIDER: Literal["smtp", "brevo", "sendgrid", "ses", "log"] = "log"
     SMTP_HOST: str | None = None
@@ -121,17 +121,38 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
-    
+
+    # SMS
+    SMS_PROVIDER: Literal["twilio", "log"] = "log"
+    TWILIO_ACCOUNT_SID: str | None = None
+    TWILIO_AUTH_TOKEN: str | None = None
+    TWILIO_FROM_NUMBER: str | None = None
+
+    # SMS OTP settings
+    SMS_OTP_LENGTH: int = 6
+    SMS_OTP_EXPIRE_MINUTES: int = 10
+    SMS_OTP_RATE_LIMIT_WINDOW: int = 60  # seconds between OTP requests
+
+    # Outbound HTTP client
+    HTTP_CLIENT_TIMEOUT: int = 30
+    HTTP_CLIENT_MAX_RETRIES: int = 3
+    HTTP_CLIENT_BASE_URL: str | None = None
+    HTTP_CLIENT_DEFAULT_HEADERS: dict[str, str] = Field(default_factory=dict)
+
+    # Brevo (Sendinblue) transactional email
+    BREVO_API_KEY: str | None = None
+    BREVO_API_URL: str = "https://api.brevo.com/v3/smtp/email"
+
     # Email notifications
     NOTIFICATIONS_FROM_EMAIL: str | None = None
     NOTIFICATIONS_FROM_NAME: str | None = None
 
     # Password reset token expiration
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 60
-    
+
     # Email verification token expiration
     EMAIL_VERIFICATION_TOKEN_EXPIRE_HOURS: int = 24
-    
+
     # Storage
     STORAGE_PROVIDER: Literal["local", "minio", "s3", "gcs", "azure"] = "local"
     LOCAL_STORAGE_PATH: str = "./uploads"
@@ -139,40 +160,41 @@ class Settings(BaseSettings):
     MINIO_ACCESS_KEY: str = "minioadmin"
     MINIO_SECRET_KEY: str = "minioadmin"
     MINIO_SECURE: bool = False
-    
+
     # AI Providers
     AI_PROVIDER: Literal["openai", "anthropic", "google", "groq", "mistral"] = "openai"
     OPENAI_API_KEY: str | None = None
+    OPENAI_MODEL: str = "gpt-4o-mini"
     ANTHROPIC_API_KEY: str | None = None
     GOOGLE_API_KEY: str | None = None
     GROQ_API_KEY: str | None = None
     MISTRAL_API_KEY: str | None = None
-    
+
     # Observability
     OTEL_ENABLED: bool = False
     OTEL_EXPORTER_OTLP_ENDPOINT: str | None = None
     OTEL_EXPORTER_OTLP_HEADERS: str | None = None
     SENTRY_DSN: str | None = None
-    
+
     # Rate limiting
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_WINDOW: int = 60  # seconds
     RATE_LIMIT_STRATEGY: Literal["fixed-window", "sliding-window", "token-bucket"] = "fixed-window"
-    
+
     # CORS
     BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8080"
-    
+
     # File upload limits
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
-    
+
     # Encryption key for field-level encryption
     ENCRYPTION_KEY: str | None = None
     ENCRYPTION_KEY_FILE: str | None = None
-    
+
     # Tenant GUC name for multi-tenancy (PostgreSQL specific)
     TENANT_GUC_NAME: str = "app.tenant_id"
-    
+
     # ------------------------------------------------------------------
     # Validators
     # ------------------------------------------------------------------
@@ -245,7 +267,7 @@ class Settings(BaseSettings):
         """
         if self.is_local:
             return
-            
+
         # Check JWT configuration
         using_rs256 = self.JWT_ALGORITHM == "RS256"
         if self.is_prod or self.is_staging:
@@ -265,7 +287,7 @@ class Settings(BaseSettings):
                 "SECRET_KEY is still the default placeholder. "
                 f"Set a strong random value for ENVIRONMENT={self.ENVIRONMENT!r}."
             )
-            
+
         # Check database credentials
         if "change-me" in self.database_url:
             raise RuntimeError(
@@ -273,7 +295,7 @@ class Settings(BaseSettings):
                 "Set DB_USER/DB_PASSWORD (or DATABASE_URL) for "
                 f"ENVIRONMENT={self.ENVIRONMENT!r}."
             )
-            
+
         # Check encryption key
         if not (self.ENCRYPTION_KEY or self.ENCRYPTION_KEY_FILE):
             raise RuntimeError(

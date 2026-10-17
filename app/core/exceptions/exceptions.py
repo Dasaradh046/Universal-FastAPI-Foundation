@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from typing import Any
 
 from app.core.logging.logging import get_logger
@@ -101,7 +102,7 @@ async def app_exception_handler(request: Request, exc: Exception):
 
 async def http_exception_handler(request: Request, exc: Exception):
     """Handle HTTP exceptions."""
-    if not isinstance(exc, HTTPException):
+    if not isinstance(exc, (HTTPException, StarletteHTTPException)):
         raise exc
     logger.error("HTTPException: %s", exc.detail)
     return JSONResponse(

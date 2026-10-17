@@ -69,18 +69,22 @@ if "+" not in async_url.drivername:
 # traffic spike or a stuck query cannot exhaust the database's connection
 # limit. ``pool_recycle`` reaps connections older than 30 minutes to avoid
 # firewalls/proxies dropping silent connections.
-engine: AsyncEngine = create_async_engine(
-    async_url,
-    echo=settings.DEBUG,
-    future=True,
-    pool_pre_ping=True,  # drop + re-establish connections that no longer respond
-    poolclass=poolclass,
-    pool_size=settings.DB_POOL_SIZE if poolclass is None else 1,
-    max_overflow=settings.DB_MAX_OVERFLOW if poolclass is None else 0,
-    pool_timeout=settings.DB_POOL_TIMEOUT,
-    pool_recycle=1800,  # 30 minutes
-    connect_args=_connect_args,
-)
+_engine_kwargs: dict[str, Any] = {
+    "echo": settings.DEBUG,
+    "future": True,
+    "pool_pre_ping": True,
+    "poolclass": poolclass,
+    "pool_recycle": 1800,  # 30 minutes
+    "connect_args": _connect_args,
+}
+if poolclass is None:
+    _engine_kwargs.update(
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
+        pool_timeout=settings.DB_POOL_TIMEOUT,
+    )
+
+engine: AsyncEngine = create_async_engine(async_url, **_engine_kwargs)
 
 # Session factory. ``expire_on_commit=False`` keeps attribute access after
 # ``commit()`` cheap (objects remain attached); routes are expected to fetch

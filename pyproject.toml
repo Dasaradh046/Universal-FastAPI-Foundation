@@ -35,6 +35,7 @@ dependencies = [
     "bcrypt>=4.0.0",
     "python-multipart>=0.0.9",
     "cryptography>=42.0.0",
+    "prometheus-client>=0.26.0",
 ]
 
 [project.optional-dependencies]
@@ -48,6 +49,7 @@ dev = [
     "black>=24.0.0",
     "isort>=5.13.0",
     "pre-commit>=3.7.0",
+    "locust>=2.15.0",
 ]
 
 mfa = [
@@ -82,6 +84,9 @@ Homepage = "https://github.com/example/universal-fastapi-foundation"
 Documentation = "https://github.com/example/universal-fastapi-foundation#readme"
 Repository = "https://github.com/example/universal-fastapi-foundation"
 
+[tool.setuptools.packages.find]
+include = ["app*", "packages*"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py312"
@@ -89,7 +94,7 @@ select = ["E", "F", "W", "C90", "I"]
 ignore = []
 
 [tool.ruff.isort]
-profile = "black"
+known-first-party = ["app", "packages"]
 
 [tool.black]
 line-length = 88
@@ -111,3 +116,4 @@ addopts = [
     "--cov=app",
     "--cov-report=term-missing"
 ]
+asyncio_mode = "auto"

@@ -11,9 +11,7 @@ from uuid import UUID
 
 from fastapi import (
     APIRouter,
-    Body,
     Depends,
-    Header,
     HTTPException,
     Request,
     Response,
@@ -26,21 +24,20 @@ from app.core.database import get_db
 from app.core.dependencies import (
     CurrentUser,
     get_current_active_user,
-    require_permission,
-    require_super_admin,
 )
-from app.core.exceptions import AuthenticationError, ConflictError, NotFoundError
+from app.core.exceptions import AuthenticationError
 from app.core.logging import get_logger
-from app.modules.auth.services import AuthService, get_auth_service
 from app.modules.auth.schemas import (
     ChangePasswordRequest,
     DemoLoginRequest,
     EmailVerificationRequest,
+    EmailVerificationResponse,
     ForgotPasswordRequest,
     LoginRequest,
     LogoutRequest,
     RefreshTokenRequest,
     RequestEmailVerificationRequest,
+    RequestEmailVerificationResponse,
     ResetPasswordRequest,
     SessionListResponse,
     TokenResponse,
@@ -53,6 +50,7 @@ from app.modules.auth.schemas import (
     TwoFactorVerifyRequest,
     UserInfo,
 )
+from app.modules.auth.services import AuthService, get_auth_service
 
 logger = get_logger(__name__)
 

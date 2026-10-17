@@ -2,11 +2,12 @@
 API router registration.
 """
 from fastapi import APIRouter
+
 from app.api.health import router as health_router
-from app.modules.example_module.router import router as example_router
 from app.integrations.email.api.router import router as email_router
 from app.modules.auth.api.v1.routes import router as auth_router_v1
-from app.modules.identity.api.router import router as identity_router
+from app.modules.example_module.router import router as example_router
+from app.modules.identity.api import router as identity_router
 
 api_router = APIRouter()
 

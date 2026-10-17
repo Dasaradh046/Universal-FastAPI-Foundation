@@ -1,41 +1,51 @@
-"Identity module."
+"""Identity module.
 
+Tenant, user, and role management.
+"""
 from __future__ import annotations
 
-from app.modules.module_sdk import ModuleManifest, ModuleRouter
+from app.modules.module_sdk import ModuleManifest
 
-from .api.v1.routes import router as api_router
-from .schemas import (
-    TenantCreate,
-    TenantUpdate,
-    TenantResponse,
-    UserCreate,
-    UserUpdate,
-    UserResponse,
-)
-from .models import Tenant, User
-from .services import TenantService, UserService
-from .repository import TenantRepository, UserRepository
+from .api import router as api_router
+from .models import RoleModel, Tenant, User
 from .permissions import (
+    ROLE_ASSIGN,
+    ROLE_DELETE,
+    ROLE_READ,
+    ROLE_WRITE,
+    TENANT_DELETE,
     TENANT_READ,
     TENANT_WRITE,
-    TENANT_DELETE,
+    USER_DELETE,
     USER_READ,
     USER_WRITE,
-    USER_DELETE,
 )
+from .repositories import RoleRepository, TenantRepository, UserRepository
+from .schemas import (
+    RoleCreate,
+    RoleResponse,
+    RoleUpdate,
+    TenantCreate,
+    TenantResponse,
+    TenantStatusUpdate,
+    TenantUpdate,
+    UserCreate,
+    UserResponse,
+    UserStatusUpdate,
+    UserUpdate,
+)
+from .services import RoleService, TenantService, UserService
 
-# Module manifest - required for registration
 MANIFEST = ModuleManifest(
     id="identity",
     version="1.0.0",
     name="Identity Module",
-    description="Tenant and user management module",
-    dependencies=[],  # Other module IDs this module depends on
-    required_capabilities=[],  # Platform capabilities required
-    optional_capabilities=["audit"],  # Optional capabilities
+    description="Tenant, user, and role management module",
+    dependencies=[],
+    required_capabilities=[],
+    optional_capabilities=["audit"],
     router=api_router,
-    models=[Tenant, User],
+    models=[Tenant, User, RoleModel],
     permissions=[
         TENANT_READ,
         TENANT_WRITE,
@@ -43,29 +53,44 @@ MANIFEST = ModuleManifest(
         USER_READ,
         USER_WRITE,
         USER_DELETE,
+        ROLE_READ,
+        ROLE_WRITE,
+        ROLE_DELETE,
+        ROLE_ASSIGN,
     ],
 )
 
-# Export public interface
 __all__ = [
-    "api_router",
-    "Tenant",
-    "User",
-    "TenantCreate",
-    "TenantUpdate",
-    "TenantResponse",
-    "UserCreate",
-    "UserUpdate",
-    "UserResponse",
-    "TenantService",
-    "UserService",
-    "TenantRepository",
-    "UserRepository",
+    "MANIFEST",
+    "ROLE_ASSIGN",
+    "ROLE_DELETE",
+    "ROLE_READ",
+    "ROLE_WRITE",
+    "TENANT_DELETE",
     "TENANT_READ",
     "TENANT_WRITE",
-    "TENANT_DELETE",
+    "USER_DELETE",
     "USER_READ",
     "USER_WRITE",
-    "USER_DELETE",
-    "MANIFEST",
+    "RoleCreate",
+    "RoleModel",
+    "RoleRepository",
+    "RoleResponse",
+    "RoleService",
+    "RoleUpdate",
+    "Tenant",
+    "TenantCreate",
+    "TenantRepository",
+    "TenantResponse",
+    "TenantService",
+    "TenantStatusUpdate",
+    "TenantUpdate",
+    "User",
+    "UserCreate",
+    "UserRepository",
+    "UserResponse",
+    "UserService",
+    "UserStatusUpdate",
+    "UserUpdate",
+    "api_router",
 ]

@@ -3,7 +3,7 @@ Permissions for the identity module.
 """
 from __future__ import annotations
 
-from app.core.permissions import Permission
+from app.core.security.permissions import Permission
 
 # Tenant permissions
 TENANT_READ = Permission(
@@ -51,11 +51,45 @@ USER_DELETE = Permission(
 )
 
 
+# Role permissions
+ROLE_READ = Permission(
+    code="role:read",
+    name="Read Roles",
+    description="View role information",
+    module="identity",
+)
+
+ROLE_WRITE = Permission(
+    code="role:write",
+    name="Write Roles",
+    description="Create, update roles",
+    module="identity",
+)
+
+ROLE_DELETE = Permission(
+    code="role:delete",
+    name="Delete Roles",
+    description="Delete roles",
+    module="identity",
+)
+
+ROLE_ASSIGN = Permission(
+    code="role:assign",
+    name="Assign Roles",
+    description="Assign and revoke roles from users",
+    module="identity",
+)
+
+
 __all__ = [
+    "ROLE_ASSIGN",
+    "ROLE_DELETE",
+    "ROLE_READ",
+    "ROLE_WRITE",
+    "TENANT_DELETE",
     "TENANT_READ",
     "TENANT_WRITE",
-    "TENANT_DELETE",
+    "USER_DELETE",
     "USER_READ",
     "USER_WRITE",
-    "USER_DELETE",
 ]

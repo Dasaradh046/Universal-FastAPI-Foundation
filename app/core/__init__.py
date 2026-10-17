@@ -15,6 +15,8 @@ from app.core.interfaces import (
 # Subpackages
 from . import audit, cache, config, database, logging, middleware, security
 from . import lifespan
+# Bridge / compatibility modules (thin re-exports)
+from . import dependencies, permissions, totp, user_agent, lockout, password_policy
 
 __all__ = [
     # Interfaces
@@ -33,4 +35,11 @@ __all__ = [
     "middleware",
     "security",
     "lifespan",
+    # Bridge / compatibility modules
+    "dependencies",
+    "permissions",
+    "totp",
+    "user_agent",
+    "lockout",
+    "password_policy",
 ]

@@ -103,7 +103,7 @@ class AuthService:
     def permissions_for(roles: str | list[str]) -> list[str]:
         """Union of permission strings across one or more role codes."""
         from app.core.permissions import ROLE_PERMISSIONS
-        from app.core.role_aliases import normalize_role
+        from app.core.security.role_aliases import normalize_role
 
         if isinstance(roles, str):
             roles = [roles]
@@ -129,7 +129,7 @@ class AuthService:
         role_scopes: list[dict[str, object]] = []
         for role in effective_roles:
             normalized_role = normalize_role(role) if isinstance(role, str) else str(role)
-            from app.core.role_aliases import normalize_role as _normalize
+            from app.core.security.role_aliases import normalize_role as _normalize
 
             normalized_role = _normalize(role)
             if normalized_role == Role.PLATFORM_OWNER.value:
@@ -233,7 +233,7 @@ class AuthService:
                 error_code=f"tenant_{state}",
             )
 
-        from app.core.role_aliases import normalize_role
+        from app.core.security.role_aliases import normalize_role
 
         effective_roles = sorted({normalize_role(r) for r in user.effective_roles})
 
@@ -1140,7 +1140,7 @@ def _hash_email_verification_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-from app.core.role_aliases import normalize_role
+from app.core.security.role_aliases import normalize_role
 
 
 def get_auth_service() -> AuthService:

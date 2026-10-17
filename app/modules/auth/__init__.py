@@ -5,18 +5,29 @@ Auth module — authentication and session management.
 from __future__ import annotations
 
 from app.modules.module_sdk import ModuleManifest
-from .router import router as auth_router_v1
-from .services import AuthService, get_auth_service
-from .repository import UserRepository
+
+from .api import auth_router_v1
+from .events import (
+    MfaDisabled,
+    MfaEnabled,
+    PasswordChanged,
+    PasswordResetCompleted,
+    PasswordResetRequested,
+    SessionRevoked,
+    UserLoggedIn,
+    UserLoggedOut,
+)
 from .permissions import (
     AUTH_LOGIN,
     AUTH_LOGOUT,
-    AUTH_REFRESH,
+    AUTH_MFA,
     AUTH_PASSWORD_CHANGE,
     AUTH_PASSWORD_RESET,
-    AUTH_MFA,
+    AUTH_REFRESH,
     AUTH_SESSIONS,
 )
+from .repository import UserRepository
+from .services import AuthService, get_auth_service
 
 # Module manifest - required for registration
 MANIFEST = ModuleManifest(
@@ -46,4 +57,12 @@ __all__ = [
     "UserRepository",
     "MANIFEST",
     "auth_router_v1",
+    "UserLoggedIn",
+    "UserLoggedOut",
+    "PasswordChanged",
+    "PasswordResetRequested",
+    "PasswordResetCompleted",
+    "MfaEnabled",
+    "MfaDisabled",
+    "SessionRevoked",
 ]

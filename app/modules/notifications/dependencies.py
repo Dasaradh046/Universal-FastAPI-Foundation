@@ -17,7 +17,7 @@ from app.core.database import get_db
 from app.core.interfaces import DatabaseService, IDatabaseService
 from app.integrations.email.service import EmailService
 from app.integrations.sms.service import SMSService
-from app.modules.notifications.repository import NotificationRepository
+from app.modules.notifications.repositories import NotificationRepository
 from app.modules.notifications.services import NotificationService
 
 

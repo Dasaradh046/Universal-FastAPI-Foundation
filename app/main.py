@@ -24,17 +24,23 @@ from app.core.observability.prometheus import PrometheusMiddleware
 from app.core.security import CurrentUser
 
 # Import module manifests for registration
+from app.modules.audit import MANIFEST as audit_module_manifest
+from app.modules.auth import MANIFEST as auth_module_manifest
 from app.modules.example_module import MANIFEST as example_module_manifest
 from app.modules.identity import MANIFEST as identity_module_manifest
 from app.modules.notifications import MANIFEST as notifications_module_manifest
+from app.modules.tenant import MANIFEST as tenant_module_manifest
 
 logger = get_logger(__name__)
 
 # Register modules
 MODULES = [
-    example_module_manifest,
+    auth_module_manifest,
     identity_module_manifest,
     notifications_module_manifest,
+    audit_module_manifest,
+    tenant_module_manifest,
+    example_module_manifest,
 ]
 
 app = FastAPI(
@@ -113,3 +119,28 @@ async def app_info(current_user: Annotated[CurrentUser, Depends(get_current_user
 
 
 __all__ = ["app"]
+
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        log_level="info",
+        reload=True,
+        reload_dirs=["app"],
+        workers=1,
+        limit_concurrency=10,
+        timeout_keep_alive=5,
+        access_log=True,
+        proxy_headers=True,
+        forwarded_allow_ips="*",
+        root_path="",
+        lifespan="on",
+        interface="auto",
+        factory=False,
+        backlog=2048,
+    )

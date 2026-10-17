@@ -209,6 +209,9 @@ class EncryptedField(TypeDecorator):
     impl = Text
     cache_ok = True
 
+    def load_dialect_impl(self, dialect):
+        return dialect.type_descriptor(Text)
+
     def process_bind_param(self, value: Optional[str], dialect) -> Optional[str]:
         """Encrypt value before storing in database."""
         if value is None:

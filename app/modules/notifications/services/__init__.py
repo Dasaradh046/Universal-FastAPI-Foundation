@@ -38,7 +38,7 @@ from app.modules.notifications.events import (
     PreferenceUpdated,
     TemplateCreated,
 )
-from app.modules.notifications.repository import NotificationRepository
+from app.modules.notifications.repositories import NotificationRepository
 from app.modules.notifications.schemas import (
     NotificationCreate,
     NotificationPreferenceCreate,

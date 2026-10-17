@@ -6,12 +6,16 @@ from __future__ import annotations
 
 from app.modules.module_sdk import ModuleManifest
 
-from .router import router
-from .schemas import ExampleCreate, ExampleUpdate, ExampleResponse
+from .api import example_router
 from .models import Example
-from .service import ExampleService
-from .repository import ExampleRepository
 from .permissions import EXAMPLE_READ, EXAMPLE_WRITE
+from .repositories import ExampleRepository
+from .schemas import (
+    ExampleCreate,
+    ExampleResponse,
+    ExampleUpdate,
+)
+from .services import ExampleService
 
 # Module manifest - required for registration
 MANIFEST = ModuleManifest(
@@ -22,14 +26,14 @@ MANIFEST = ModuleManifest(
     dependencies=[],
     required_capabilities=[],
     optional_capabilities=["audit"],
-    router=router,
+    router=example_router,
     models=[Example],
     permissions=[EXAMPLE_READ, EXAMPLE_WRITE],
 )
 
 # Export public interface
 __all__ = [
-    "router",
+    "example_router",
     "Example",
     "ExampleCreate",
     "ExampleUpdate",

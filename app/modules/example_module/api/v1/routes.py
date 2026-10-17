@@ -6,7 +6,7 @@ All endpoints use the application-wide ResponseEnvelope for consistent responses
 
 from __future__ import annotations
 
-from typing import List, Annotated
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -18,7 +18,7 @@ from app.modules.example_module.schemas import (
     ExampleResponseEnvelope,
     ExampleListResponseEnvelope,
 )
-from app.modules.example_module.service import ExampleService
+from app.modules.example_module.services import ExampleService
 from app.modules.example_module.dependencies import get_example_service
 from app.core.dependencies import get_current_user, get_current_active_user
 from app.core.security import CurrentUser

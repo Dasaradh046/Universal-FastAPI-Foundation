@@ -20,7 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.security.encryption import EncryptedText
-from app.models.base import Base, TenantBase
+from app.models.base import Base, TimestampMixin, UUIDPrimaryKey
 from app.models.enums import TenantStatus
 
 
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from app.models.user import User
 
 
-class Tenant(TenantBase, Base):
+class Tenant(UUIDPrimaryKey, TimestampMixin, Base):
     """Organization/tenant record."""
 
     __tablename__ = "tenants"

@@ -9,15 +9,35 @@ tracking, idempotency, and retry handling.
 from __future__ import annotations
 
 from app.modules.module_sdk import ModuleManifest
-from app.modules.notifications.api.v1.routes import router as notifications_router_v1
-from app.modules.notifications.permissions import (
+
+from .api import notifications_router_v1
+from .events import (
+    NotificationCreated,
+    NotificationFailed,
+    NotificationSent,
+    PreferenceUpdated,
+    TemplateCreated,
+)
+from .permissions import (
     NOTIFY_READ,
     NOTIFY_SEND,
     NOTIFY_TEMPLATES,
     NOTIFY_WRITE,
 )
-from app.modules.notifications.repository import NotificationRepository
-from app.modules.notifications.services import NotificationService
+from .repositories import NotificationRepository
+from .schemas import (
+    NotificationCreate,
+    NotificationPreferenceCreate,
+    NotificationPreferenceResponse,
+    NotificationPreferenceUpdate,
+    NotificationResponse,
+    NotificationSendRequest,
+    NotificationSendResponse,
+    NotificationTemplateCreate,
+    NotificationTemplateResponse,
+    NotificationTemplateUpdate,
+)
+from .services import NotificationService
 
 # Module manifest - required for registration
 MANIFEST = ModuleManifest(
@@ -32,12 +52,12 @@ MANIFEST = ModuleManifest(
     required_capabilities=[],
     optional_capabilities=["audit"],
     router=notifications_router_v1,
-    models=[],  # Models live in app.models.notification
+    models=[],
     permissions=[
-        NOTIFY_READ,  # type: ignore[list-item]
-        NOTIFY_WRITE,  # type: ignore[list-item]
-        NOTIFY_SEND,  # type: ignore[list-item]
-        NOTIFY_TEMPLATES,  # type: ignore[list-item]
+        NOTIFY_READ,
+        NOTIFY_WRITE,
+        NOTIFY_SEND,
+        NOTIFY_TEMPLATES,
     ],
 )
 
@@ -50,4 +70,19 @@ __all__ = [
     "NOTIFY_WRITE",
     "NOTIFY_SEND",
     "NOTIFY_TEMPLATES",
+    "NotificationCreate",
+    "NotificationResponse",
+    "NotificationSendRequest",
+    "NotificationSendResponse",
+    "NotificationTemplateCreate",
+    "NotificationTemplateResponse",
+    "NotificationTemplateUpdate",
+    "NotificationPreferenceCreate",
+    "NotificationPreferenceResponse",
+    "NotificationPreferenceUpdate",
+    "NotificationCreated",
+    "NotificationSent",
+    "NotificationFailed",
+    "TemplateCreated",
+    "PreferenceUpdated",
 ]

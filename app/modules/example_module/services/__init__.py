@@ -17,7 +17,7 @@ from uuid import UUID
 from app.core.audit import AuditService
 from app.core.exceptions import NotFoundError, ConflictError
 from app.core.interfaces import IDatabaseService
-from app.modules.example_module.repository import ExampleRepository, ExampleRepositoryProtocol
+from app.modules.example_module.repositories import ExampleRepository, ExampleRepositoryProtocol
 from app.modules.example_module.schemas import ExampleCreate, ExampleUpdate, ExampleResponse
 
 

@@ -2,21 +2,34 @@
 Models package — centralized SQLAlchemy model definitions.
 """
 
-from app.models.base import Base, UUIDPrimaryKey, TimestampMixin, TenantBase
-from app.models.tenant import Tenant
-from app.models.user import (
-    User,
-    RoleModel,
-    Permission,
-    RolePermission,
-    UserRole,
-    UserSession,
-    PasswordResetToken,
-    EmailVerificationToken,
+from app.models.audit import AuditLog
+from app.models.base import Base, TenantBase, TimestampMixin, UUIDPrimaryKey
+from app.models.enums import (
+    AuditAction,
+    NotificationChannel,
+    NotificationStatus,
+    NotificationType,
+    Role,
+    TenantStatus,
 )
 from app.models.example import Example
-from app.models.audit import AuditLog
-from app.models.enums import Role, AuditAction, TenantStatus
+from app.models.notification import (
+    Notification,
+    NotificationDelivery,
+    NotificationPreference,
+    NotificationTemplate,
+)
+from app.models.tenant import Tenant
+from app.models.user import (
+    EmailVerificationToken,
+    PasswordResetToken,
+    Permission,
+    RoleModel,
+    RolePermission,
+    User,
+    UserRole,
+    UserSession,
+)
 
 __all__ = [
     "Base",
@@ -34,7 +47,14 @@ __all__ = [
     "EmailVerificationToken",
     "Example",
     "AuditLog",
+    "Notification",
+    "NotificationTemplate",
+    "NotificationPreference",
+    "NotificationDelivery",
     "Role",
     "AuditAction",
     "TenantStatus",
+    "NotificationChannel",
+    "NotificationStatus",
+    "NotificationType",
 ]

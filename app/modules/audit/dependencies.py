@@ -18,7 +18,7 @@ from app.modules.audit.services import AuditServiceModule
 
 
 def get_audit_repository(
-    db: Annotated[AsyncSession, Depends(get_db)]
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AuditRepository:
     """Get audit repository instance."""
     return AuditRepository(db)

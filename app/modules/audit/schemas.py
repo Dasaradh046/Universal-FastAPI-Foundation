@@ -6,10 +6,11 @@ Follows the application-wide ResponseEnvelope pattern for consistent API respons
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, Generic, TypeVar, Any
+from typing import Optional, TypeVar, Any
 from datetime import datetime
 from uuid import UUID
+
+from pydantic import BaseModel, Field, ConfigDict
 
 from app.schemas.common import ResponseEnvelope
 from app.models.enums import AuditAction
@@ -52,9 +53,7 @@ class AuditLogInDBBase(AuditLogBase):
     actor_user_id: Optional[UUID] = None
     created_at: datetime
 
-    model_config = ConfigDict(
-        from_attributes=True,
-    )
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AuditLogResponse(AuditLogInDBBase):
@@ -62,12 +61,6 @@ class AuditLogResponse(AuditLogInDBBase):
     pass
 
 
-class AuditLogInDB(AuditLogInDBBase):
-    """Model for audit log stored in DB."""
-    pass
-
-
-# Query/filter schemas
 class AuditLogFilter(BaseModel):
     """Filter parameters for audit log queries."""
     action: Optional[AuditAction] = None
@@ -84,7 +77,6 @@ class AuditLogFilter(BaseModel):
     )
 
 
-# Response envelope specializations
 class AuditLogResponseEnvelope(ResponseEnvelope[AuditLogResponse]):
     """Single audit log response envelope."""
     pass
@@ -100,7 +92,6 @@ __all__ = [
     "AuditLogCreate",
     "AuditLogInDBBase",
     "AuditLogResponse",
-    "AuditLogInDB",
     "AuditLogFilter",
     "AuditLogResponseEnvelope",
     "AuditLogListResponseEnvelope",

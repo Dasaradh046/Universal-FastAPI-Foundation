@@ -12,6 +12,7 @@ from datetime import datetime
 @dataclass
 class AuditLogCreated:
     """Event raised when an audit log is created."""
+
     log_id: UUID
     tenant_id: UUID
     action: str
@@ -22,6 +23,7 @@ class AuditLogCreated:
 @dataclass
 class AuditLogsExported:
     """Event raised when audit logs are exported."""
+
     exported_by: UUID
     tenant_id: UUID
     filter_criteria: dict

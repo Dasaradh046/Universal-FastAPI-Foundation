@@ -11,25 +11,14 @@ Follows SOLID principles:
 
 from __future__ import annotations
 
-from typing import List, Optional, Protocol
+from typing import List, Optional
 from uuid import UUID
 
 from app.core.audit import AuditService
 from app.core.exceptions import NotFoundError, ConflictError
 from app.core.interfaces import IDatabaseService
-from app.modules.example_module.repository import ExampleRepository
+from app.modules.example_module.repository import ExampleRepository, ExampleRepositoryProtocol
 from app.modules.example_module.schemas import ExampleCreate, ExampleUpdate, ExampleResponse
-
-
-class ExampleRepositoryProtocol(Protocol):
-    """Protocol for example repository - enables dependency inversion."""
-
-    async def get(self, id: UUID) -> Optional[Example]: ...
-    async def get_by_name(self, name: str, tenant_id: UUID) -> Optional[Example]: ...
-    async def get_multi(self, tenant_id: UUID, skip: int, limit: int) -> List[Example]: ...
-    async def create(self, obj_in: ExampleCreate, tenant_id: UUID) -> Example: ...
-    async def update(self, db_obj: Example, obj_in: ExampleUpdate) -> Example: ...
-    async def delete(self, db_obj: Example) -> bool: ...
 
 
 class ExampleService:
@@ -40,9 +29,9 @@ class ExampleService:
 
     def __init__(
         self,
-        repository: ExampleRepository,
-        audit_service: AuditService | None = None,
-        db_service: IDatabaseService | None = None
+        repository: ExampleRepositoryProtocol,
+        audit_service: Optional[AuditService] = None,
+        db_service: Optional[IDatabaseService] = None,
     ):
         self.repository = repository
         self._audit_service = audit_service
@@ -52,12 +41,12 @@ class ExampleService:
         self,
         action: str,
         resource: str,
-        resource_id: str | None = None,
-        description: str | None = None,
-        before_state: dict | None = None,
-        after_state: dict | None = None,
-        tenant_id: UUID | None = None,
-        actor_user_id: UUID | None = None,
+        resource_id: Optional[str] = None,
+        description: Optional[str] = None,
+        before_state: Optional[dict] = None,
+        after_state: Optional[dict] = None,
+        tenant_id: Optional[UUID] = None,
+        actor_user_id: Optional[UUID] = None,
     ) -> None:
         """Record an audit event if audit service is available."""
         if self._audit_service and tenant_id:
@@ -73,10 +62,9 @@ class ExampleService:
                     actor_user_id=actor_user_id,
                 )
             except Exception as exc:
-                # Don't let audit failures break the main operation
                 import logging
                 logger = logging.getLogger(__name__)
-                logger.error(f"Failed to record audit event: {exc}")
+                logger.error("Failed to record audit event: %s", exc)
 
     def _to_dict(self, example: Example) -> dict:
         """Convert example to dictionary for audit logging."""
@@ -125,7 +113,7 @@ class ExampleService:
         self,
         tenant_id: UUID,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[ExampleResponse]:
         """Get multiple examples for a tenant."""
         examples = await self.repository.get_multi(tenant_id, skip=skip, limit=limit)
@@ -144,10 +132,9 @@ class ExampleService:
         self,
         obj_in: ExampleCreate,
         tenant_id: UUID,
-        actor_user_id: UUID | None = None
+        actor_user_id: Optional[UUID] = None,
     ) -> ExampleResponse:
         """Create a new example."""
-        # Check for duplicate name within tenant
         existing = await self.repository.get_by_name(obj_in.name, tenant_id)
         if existing:
             raise ConflictError(f"Example with name '{obj_in.name}' already exists in tenant {tenant_id}")
@@ -172,24 +159,19 @@ class ExampleService:
         id: UUID,
         obj_in: ExampleUpdate,
         tenant_id: UUID,
-        actor_user_id: UUID | None = None
+        actor_user_id: Optional[UUID] = None,
     ) -> ExampleResponse:
         """Update an example."""
-        # Get the existing example
         example = await self.repository.get(id)
         if not example or example.tenant_id != tenant_id:
             raise NotFoundError(f"Example with ID {id} not found in tenant {tenant_id}")
 
-        # Check for duplicate name if name is being updated
         if obj_in.name and obj_in.name != example.name:
             existing = await self.repository.get_by_name(obj_in.name, tenant_id)
             if existing and existing.id != id:
                 raise ConflictError(f"Example with name '{obj_in.name}' already exists in tenant {tenant_id}")
 
-        # Store before state for audit
         before_state = self._to_dict(example)
-
-        # Update the example
         updated_example = await self.repository.update(example, obj_in)
 
         await self._record_audit(
@@ -209,18 +191,14 @@ class ExampleService:
         self,
         id: UUID,
         tenant_id: UUID,
-        actor_user_id: UUID | None = None
+        actor_user_id: Optional[UUID] = None,
     ) -> bool:
         """Delete an example."""
-        # Get the existing example
         example = await self.repository.get(id)
         if not example or example.tenant_id != tenant_id:
             raise NotFoundError(f"Example with ID {id} not found in tenant {tenant_id}")
 
-        # Store before state for audit
         before_state = self._to_dict(example)
-
-        # Delete the example
         result = await self.repository.delete(example)
 
         await self._record_audit(
@@ -234,7 +212,7 @@ class ExampleService:
             actor_user_id=actor_user_id,
         )
 
-        return result is not None
+        return result
 
 
-__all__ = ["ExampleService", "ExampleRepositoryProtocol"]
+__all__ = ["ExampleService"]

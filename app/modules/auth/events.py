@@ -12,6 +12,7 @@ from datetime import datetime
 @dataclass
 class UserLoggedIn:
     """Event raised when a user logs in."""
+
     user_id: UUID
     tenant_id: UUID
     ip_address: str | None
@@ -23,6 +24,7 @@ class UserLoggedIn:
 @dataclass
 class UserLoggedOut:
     """Event raised when a user logs out."""
+
     user_id: UUID
     tenant_id: UUID
     session_id: UUID | None
@@ -33,6 +35,7 @@ class UserLoggedOut:
 @dataclass
 class PasswordChanged:
     """Event raised when a user changes their password."""
+
     user_id: UUID
     tenant_id: UUID
     ip_address: str | None
@@ -42,6 +45,7 @@ class PasswordChanged:
 @dataclass
 class PasswordResetRequested:
     """Event raised when a password reset is requested."""
+
     user_id: UUID
     tenant_id: UUID
     ip_address: str | None
@@ -51,6 +55,7 @@ class PasswordResetRequested:
 @dataclass
 class PasswordResetCompleted:
     """Event raised when a password reset is completed."""
+
     user_id: UUID
     tenant_id: UUID
     ip_address: str | None
@@ -60,6 +65,7 @@ class PasswordResetCompleted:
 @dataclass
 class MfaEnabled:
     """Event raised when 2FA is enabled."""
+
     user_id: UUID
     tenant_id: UUID
     created_at: datetime
@@ -68,6 +74,7 @@ class MfaEnabled:
 @dataclass
 class MfaDisabled:
     """Event raised when 2FA is disabled."""
+
     user_id: UUID
     tenant_id: UUID
     created_at: datetime
@@ -76,6 +83,7 @@ class MfaDisabled:
 @dataclass
 class SessionRevoked:
     """Event raised when a device session is revoked."""
+
     session_id: UUID
     user_id: UUID
     tenant_id: UUID

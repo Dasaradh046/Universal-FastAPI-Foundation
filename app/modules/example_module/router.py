@@ -10,6 +10,7 @@ from typing import List, Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
+
 from app.modules.example_module.schemas import (
     ExampleCreate,
     ExampleUpdate,
@@ -21,12 +22,12 @@ from app.modules.example_module.service import ExampleService
 from app.modules.example_module.dependencies import get_example_service
 from app.core.dependencies import get_current_user, get_current_active_user
 from app.core.security import CurrentUser
-from app.schemas.common import ok, paginated
+from app.schemas.common import ok, created, paginated
 
 router = APIRouter(
     prefix="/examples",
     tags=["examples"],
-    dependencies=[Depends(get_current_active_user)],  # Require authentication for all endpoints
+    dependencies=[Depends(get_current_active_user)],
 )
 
 
@@ -58,7 +59,6 @@ async def read_examples(
         skip=skip,
         limit=limit,
     )
-    # For pagination, we'd need total count - simplified for now
     return ok(data=examples, message="Examples retrieved successfully")
 
 
@@ -105,7 +105,6 @@ async def delete_example(
         tenant_id=current_user.tenant_id,
         actor_user_id=current_user.id,
     )
-    # 204 No Content - no response body
     return None
 
 

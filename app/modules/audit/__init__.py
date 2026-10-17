@@ -5,10 +5,10 @@ Audit module — security and compliance audit logging.
 from __future__ import annotations
 
 from app.modules.module_sdk import ModuleManifest
-from app.modules.audit.api.v1.routes import router as audit_router_v1
-from app.modules.audit.services import AuditServiceModule
-from app.modules.audit.repository import AuditRepository
-from app.modules.audit.permissions import (
+from .router import router as audit_router_v1
+from .services import AuditServiceModule
+from .repository import AuditRepository
+from .permissions import (
     AUDIT_READ,
     AUDIT_EXPORT,
 )
@@ -23,7 +23,7 @@ MANIFEST = ModuleManifest(
     required_capabilities=[],
     optional_capabilities=[],
     router=audit_router_v1,
-    models=[],  # Uses AuditLog from app.models
+    models=[],
     permissions=[
         AUDIT_READ,
         AUDIT_EXPORT,

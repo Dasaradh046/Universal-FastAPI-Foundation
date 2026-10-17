@@ -1,31 +1,45 @@
 """
 Events for the example module.
 """
-# In a real implementation, this would contain event definitions and handlers
-# For now, it's a placeholder
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
+from uuid import UUID
 
 
-class ExampleEvents:
-    """Example events."""
-    
-    CREATED = "example.created"
-    UPDATED = "example.updated"
-    DELETED = "example.deleted"
+@dataclass
+class ExampleCreated:
+    """Event raised when an example is created."""
+
+    example_id: UUID
+    tenant_id: UUID
+    name: str
+    created_at: datetime
 
 
-def handle_example_created(example_data: dict):
-    """Handle example created event."""
-    # In a real implementation, this would trigger notifications, etc.
-    pass
+@dataclass
+class ExampleUpdated:
+    """Event raised when an example is updated."""
+
+    example_id: UUID
+    tenant_id: UUID
+    name: str
+    updated_at: datetime
 
 
-def handle_example_updated(example_data: dict):
-    """Handle example updated event."""
-    # In a real implementation, this would trigger notifications, etc.
-    pass
+@dataclass
+class ExampleDeleted:
+    """Event raised when an example is deleted."""
+
+    example_id: UUID
+    tenant_id: UUID
+    deleted_at: datetime
 
 
-def handle_example_deleted(example_id: int):
-    """Handle example deleted event."""
-    # In a real implementation, this would trigger notifications, etc.
-    pass
+__all__ = [
+    "ExampleCreated",
+    "ExampleUpdated",
+    "ExampleDeleted",
+]

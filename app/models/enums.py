@@ -71,8 +71,43 @@ class TenantStatus(str, enum.Enum):
     ARCHIVED = "ARCHIVED"
 
 
+class NotificationChannel(str, enum.Enum):
+    """Delivery channels for notifications."""
+
+    EMAIL = "email"
+    SMS = "sms"
+    PUSH = "push"
+    IN_APP = "in_app"
+
+
+class NotificationStatus(str, enum.Enum):
+    """Delivery status of a notification."""
+
+    PENDING = "pending"
+    SENT = "sent"
+    DELIVERED = "delivered"
+    FAILED = "failed"
+    BOUNCED = "bounced"
+
+
+class NotificationType(str, enum.Enum):
+    """Categories of notifications."""
+
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    SUCCESS = "success"
+    VERIFICATION = "verification"
+    PASSWORD_RESET = "password_reset"
+    WELCOME = "welcome"
+    ALERT = "alert"
+
+
 __all__ = [
     "Role",
     "AuditAction",
     "TenantStatus",
+    "NotificationChannel",
+    "NotificationStatus",
+    "NotificationType",
 ]

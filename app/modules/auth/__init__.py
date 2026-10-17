@@ -5,10 +5,10 @@ Auth module — authentication and session management.
 from __future__ import annotations
 
 from app.modules.module_sdk import ModuleManifest
-from app.modules.auth.api.v1.routes import router as auth_router_v1
-from app.modules.auth.services import AuthService, get_auth_service
-from app.modules.auth.repository import UserRepository
-from app.modules.auth.permissions import (
+from .router import router as auth_router_v1
+from .services import AuthService, get_auth_service
+from .repository import UserRepository
+from .permissions import (
     AUTH_LOGIN,
     AUTH_LOGOUT,
     AUTH_REFRESH,
@@ -24,11 +24,11 @@ MANIFEST = ModuleManifest(
     version="1.0.0",
     name="Authentication Module",
     description="User authentication, sessions, MFA, and password management",
-    dependencies=["identity"],  # Depends on identity for tenant/user models
+    dependencies=["identity"],
     required_capabilities=[],
     optional_capabilities=["audit"],
     router=auth_router_v1,
-    models=[],  # Uses models from identity/app.models
+    models=[],
     permissions=[
         AUTH_LOGIN,
         AUTH_LOGOUT,

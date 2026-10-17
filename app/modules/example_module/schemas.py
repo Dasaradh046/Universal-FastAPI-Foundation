@@ -6,10 +6,11 @@ Follows the application-wide ResponseEnvelope pattern for consistent API respons
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, Generic, TypeVar
+from typing import Optional, TypeVar, Any
 from datetime import datetime
 from uuid import UUID
+
+from pydantic import BaseModel, Field, ConfigDict
 
 from app.schemas.common import ResponseEnvelope
 
@@ -48,11 +49,9 @@ class ExampleInDBBase(ExampleBase):
     id: UUID
     tenant_id: UUID
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
-    model_config = ConfigDict(
-        from_attributes=True,
-    )
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExampleResponse(ExampleInDBBase):
@@ -60,12 +59,6 @@ class ExampleResponse(ExampleInDBBase):
     pass
 
 
-class ExampleInDB(ExampleInDBBase):
-    """Model for example stored in DB."""
-    pass
-
-
-# Response envelope specializations for consistent API responses
 class ExampleResponseEnvelope(ResponseEnvelope[ExampleResponse]):
     """Single example response envelope."""
     pass
@@ -82,7 +75,6 @@ __all__ = [
     "ExampleUpdate",
     "ExampleInDBBase",
     "ExampleResponse",
-    "ExampleInDB",
     "ExampleResponseEnvelope",
     "ExampleListResponseEnvelope",
 ]

@@ -16,6 +16,17 @@ from app.models.example import Example
 from app.modules.example_module.schemas import ExampleCreate, ExampleUpdate
 
 
+class ExampleRepositoryProtocol:
+    """Protocol for example repository - enables dependency inversion."""
+
+    async def get(self, id: UUID) -> Optional[Example]: ...
+    async def get_by_name(self, name: str, tenant_id: UUID) -> Optional[Example]: ...
+    async def get_multi(self, tenant_id: UUID, skip: int, limit: int) -> List[Example]: ...
+    async def create(self, obj_in: ExampleCreate, tenant_id: UUID) -> Example: ...
+    async def update(self, db_obj: Example, obj_in: ExampleUpdate) -> Example: ...
+    async def delete(self, db_obj: Example) -> bool: ...
+
+
 class ExampleRepository:
     """Repository for example entities.
 
@@ -35,7 +46,7 @@ class ExampleRepository:
         """Get an example by name within a tenant."""
         stmt = select(Example).where(
             Example.name == name,
-            Example.tenant_id == tenant_id
+            Example.tenant_id == tenant_id,
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
@@ -44,7 +55,7 @@ class ExampleRepository:
         self,
         tenant_id: UUID,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[Example]:
         """Get multiple examples for a tenant."""
         stmt = (
@@ -61,7 +72,7 @@ class ExampleRepository:
         db_obj = Example(
             name=obj_in.name,
             description=obj_in.description,
-            tenant_id=tenant_id
+            tenant_id=tenant_id,
         )
         self.db.add(db_obj)
         await self.db.flush()
@@ -71,7 +82,7 @@ class ExampleRepository:
     async def update(
         self,
         db_obj: Example,
-        obj_in: ExampleUpdate
+        obj_in: ExampleUpdate,
     ) -> Example:
         """Update an example."""
         update_data = obj_in.model_dump(exclude_unset=True)
@@ -89,4 +100,4 @@ class ExampleRepository:
         return True
 
 
-__all__ = ["ExampleRepository"]
+__all__ = ["ExampleRepository", "ExampleRepositoryProtocol"]

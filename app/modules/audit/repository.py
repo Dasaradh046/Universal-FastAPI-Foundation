@@ -17,6 +17,15 @@ from app.models.audit import AuditLog
 from app.modules.audit.schemas import AuditLogCreate, AuditLogFilter
 
 
+class AuditRepositoryProtocol(Protocol):
+    """Protocol for audit repository - enables dependency inversion."""
+
+    async def get(self, id: UUID) -> Optional[AuditLog]: ...
+    async def create(self, obj_in: AuditLogCreate) -> AuditLog: ...
+    async def get_multi(self, tenant_id: UUID, filters: AuditLogFilter | None, skip: int, limit: int) -> List[AuditLog]: ...
+    async def count(self, tenant_id: UUID, filters: AuditLogFilter | None) -> int: ...
+
+
 class AuditRepository:
     """Repository for audit log entities.
 
@@ -61,7 +70,7 @@ class AuditRepository:
         tenant_id: UUID,
         filters: AuditLogFilter | None = None,
         skip: int = 0,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[AuditLog]:
         """Get multiple audit logs for a tenant with optional filters."""
         stmt = select(AuditLog).where(AuditLog.tenant_id == tenant_id)
@@ -89,7 +98,7 @@ class AuditRepository:
     async def count(
         self,
         tenant_id: UUID,
-        filters: AuditLogFilter | None = None
+        filters: AuditLogFilter | None = None,
     ) -> int:
         """Count audit logs for a tenant with optional filters."""
         stmt = select(func.count()).select_from(AuditLog).where(AuditLog.tenant_id == tenant_id)
@@ -112,15 +121,6 @@ class AuditRepository:
 
         result = await self.db.execute(stmt)
         return int(result.scalar_one())
-
-
-class AuditRepositoryProtocol(Protocol):
-    """Protocol for audit repository - enables dependency inversion."""
-
-    async def get(self, id: UUID) -> Optional[AuditLog]: ...
-    async def create(self, obj_in: AuditLogCreate) -> AuditLog: ...
-    async def get_multi(self, tenant_id: UUID, filters: AuditLogFilter | None, skip: int, limit: int) -> List[AuditLog]: ...
-    async def count(self, tenant_id: UUID, filters: AuditLogFilter | None) -> int: ...
 
 
 __all__ = ["AuditRepository", "AuditRepositoryProtocol"]

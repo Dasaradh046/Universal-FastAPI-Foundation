@@ -37,8 +37,8 @@ class AuditServiceModule:
     def __init__(
         self,
         repository: AuditRepositoryProtocol,
-        audit_service: AuditService | None = None,
-        db_service: IDatabaseService | None = None
+        audit_service: Optional[AuditService] = None,
+        db_service: Optional[IDatabaseService] = None,
     ):
         self.repository = repository
         self._audit_service = audit_service

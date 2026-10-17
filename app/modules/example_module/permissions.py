@@ -1,16 +1,17 @@
 """
 Permissions for the example module.
 """
+
 from __future__ import annotations
 
 from app.core.permissions import Permission
 
-# Example module permissions
 EXAMPLE_READ = Permission(
     code="example:read",
     name="Read Examples",
     description="View example entities",
     module="example_module",
+    action=None,
 )
 
 EXAMPLE_WRITE = Permission(
@@ -18,6 +19,7 @@ EXAMPLE_WRITE = Permission(
     name="Write Examples",
     description="Create, update, delete example entities",
     module="example_module",
+    action=None,
 )
 
 EXAMPLE_DELETE = Permission(
@@ -25,6 +27,7 @@ EXAMPLE_DELETE = Permission(
     name="Delete Examples",
     description="Delete example entities",
     module="example_module",
+    action=None,
 )
 
 

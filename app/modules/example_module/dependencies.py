@@ -11,8 +11,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import AuditService
-from app.core.audit import get_core_audit_service as get_audit_service
+from app.core.audit import AuditService, get_core_audit_service as get_audit_service
 from app.core.database import get_db
 from app.core.interfaces import DatabaseService, IDatabaseService
 from app.modules.example_module.repository import ExampleRepository
@@ -20,7 +19,7 @@ from app.modules.example_module.service import ExampleService
 
 
 def get_example_repository(
-    db: Annotated[AsyncSession, Depends(get_db)]
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ExampleRepository:
     """Get example repository instance."""
     return ExampleRepository(db)

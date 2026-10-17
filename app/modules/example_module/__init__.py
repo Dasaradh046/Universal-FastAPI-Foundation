@@ -1,7 +1,10 @@
-"""Example module package."""
+"""
+Example module package — demonstrates the foundation module patterns.
+"""
+
 from __future__ import annotations
 
-from app.modules.module_sdk import ModuleManifest, ModuleRouter
+from app.modules.module_sdk import ModuleManifest
 
 from .router import router
 from .schemas import ExampleCreate, ExampleUpdate, ExampleResponse
@@ -16,9 +19,9 @@ MANIFEST = ModuleManifest(
     version="1.0.0",
     name="Example Module",
     description="Example module demonstrating the foundation patterns",
-    dependencies=[],  # Other module IDs this module depends on
-    required_capabilities=[],  # Platform capabilities required
-    optional_capabilities=["audit"],  # Optional capabilities
+    dependencies=[],
+    required_capabilities=[],
+    optional_capabilities=["audit"],
     router=router,
     models=[Example],
     permissions=[EXAMPLE_READ, EXAMPLE_WRITE],
